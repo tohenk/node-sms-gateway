@@ -1,0 +1,126 @@
+/**
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2018 Toha <tohenk@yahoo.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+/*
+ * Main App handler.
+ */
+
+const path          = require('path');
+const Cmd           = require('./lib/cmd');
+
+Cmd.addBool('help', 'h', 'Show program usage').setAccessible(false);
+Cmd.addVar('config', '', 'Read app configuration from file', 'config-file');
+Cmd.addVar('url', 'u', 'Use terminal at URL', 'url');
+Cmd.addVar('port', 'p', 'Set web server port to listen', 'port');
+Cmd.addVar('plugins', '', 'Load plugins at start, separate each plugin with comma', 'plugins');
+
+if (!Cmd.parse() || (Cmd.get('help') && usage())) {
+    process.exit();
+}
+
+const crypto        = require('crypto');
+const fs            = require('fs');
+const ntUtil        = require('./lib/util');
+const AppTerm       = require('./term');
+
+const database = {
+    dialect: 'mysql',
+    host: 'localhost',
+    username: 'root',
+    password: null,
+    database: 'smsgw'
+}
+var config = {};
+var configFile;
+// read configuration from command line values
+if (Cmd.get('config') && fs.existsSync(Cmd.get('config'))) {
+    configFile = Cmd.get('config');
+} else if (fs.existsSync(path.join(__dirname, 'config.json'))) {
+    configFile = path.join(__dirname, 'config.json');
+}
+if (configFile) {
+    console.log('Reading configuration %s', configFile);
+    config = JSON.parse(fs.readFileSync(configFile));
+}
+// check for default configuration
+if (!config.database)
+    config.database = database;
+if (!config.url)
+    config.url = 'http://localhost:8000';
+if (!config.countryCode)
+    config.countryCode = '62';
+if (!config.operatorFilename)
+    config.operatorFilename = path.join(__dirname, 'Operator.ini');
+if (!config.configdir)
+    config.configdir = path.join(__dirname, 'config');
+if (!config.logdir)
+    config.logdir = path.join(__dirname, 'logs');
+if (!config.secret) {
+        const shasum = crypto.createHash('sha1');
+        shasum.update(ntUtil.formatDate(new Date(), 'yyyyMMddHHmmsszzz') + (Math.random() * 1000000).toString());
+        config.secret = shasum.digest('hex').substr(0, 8);
+        console.log('Using secret: %s', config.secret);
+    }
+if (!config.database.logging) {
+    const dblogger = new console.Console(fs.createWriteStream(path.join(config.logdir, 'db.log')));
+    config.database.logging = function() {
+        const args = Array.from(arguments);
+        if (args.length) {
+            args[0] = ntUtil.formatDate(new Date(), 'dd-MM HH:mm:ss.zzz') + ' ' + args[0];
+        }
+        dblogger.log.apply(null, args);
+    }
+}
+config.plugins = Cmd.get('plugins');
+
+AppTerm.init(config).then(() => {
+    run();
+}).catch((err) => {
+    console.log(err);
+});
+
+function run() {
+    const port = Cmd.get('port') | 8080;
+    const app = require('./ui/app');
+    const http = require('http').Server(app);
+    const io = require('socket.io')(http);
+    const termio = require('socket.io-client');
+    AppTerm.setSocketIo(io);
+    AppTerm.setTermIo(termio);
+    app.title = 'SMS Gateway';
+    app.term = app.locals.term = AppTerm;
+    http.listen(port, () => {
+        console.log('Application ready on port %s...', port);
+    });
+}
+
+function usage() {
+    console.log('Usage:');
+    console.log('  node %s [options]', path.basename(process.argv[1]));
+    console.log('');
+    console.log('Options:');
+    console.log(Cmd.dump());
+    console.log('');
+    return true;
+}

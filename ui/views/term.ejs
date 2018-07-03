@@ -1,0 +1,115 @@
+<form class="ui form" action="/<%= terminal.name %>/apply">
+  <div class="ui icon message">
+    <i class="info icon"></i>
+    <div class="content">
+      <div class="header">Terminal configuration</div>
+      <p>Here you can configure the terminal options. Once complete, clik <em>Apply</em> to allow the changes to take effects.</p>
+    </div>
+  </div>
+  <h4 class="ui dividing header">Voice call</h4>
+  <div class="two fields">
+    <div class="field">
+      <div class="ui toggle checkbox">
+        <input type="checkbox" name="term[rejectCall]" class="hidden"<%= terminal.options.rejectCall ? ' checked' : '' %>>
+        <label>Reject incoming call</label>
+      </div>
+    </div>
+    <div class="field">
+      <div class="ui toggle checkbox">
+        <input type="checkbox" name="term[allowCall]" class="hidden"<%= terminal.options.allowCall ? ' checked' : '' %>>
+        <label>Allow outgoing call</label>
+      </div>
+    </div>
+  </div>
+  <h4 class="ui dividing header">Message</h4>
+  <div class="two fields">
+    <div class="field">
+      <div class="ui toggle checkbox">
+        <input type="checkbox" name="term[sendMessage]" class="hidden"<%= terminal.options.sendMessage ? ' checked' : '' %>>
+        <label>Send message<br/>
+          <small>Uncheck this option to prevent outgoing message to be sent</small>
+        </label>
+      </div>
+    </div>
+    <div class="field">
+      <div class="ui toggle checkbox">
+        <input type="checkbox" name="term[receiveMessage]" class="hidden"<%= terminal.options.receiveMessage ? ' checked' : '' %>>
+        <label>Receive message<br/>
+          <small>Uncheck this option to ignore received message processing</small>
+        </label>
+      </div>
+    </div>
+  </div>
+  <div class="two fields">
+    <div class="field">
+      <div class="ui toggle checkbox">
+        <input type="checkbox" name="term[deleteMessage]" class="hidden"<%= terminal.options.deleteMessage ? ' checked' : '' %>>
+        <label>Delete message<br/>
+          <small>Allow message deleted from its storage once its read</small>
+        </label>
+      </div>
+    </div>
+    <div class="field">
+      <div class="ui toggle checkbox">
+        <input type="checkbox" name="term[replyBlockedMessage]" class="hidden"<%= terminal.options.replyBlockedMessage ? ' checked' : '' %>>
+        <label>Reply blocked message<br/>
+          <small>When receiving message is disabled, reply incoming message with blocked message</small>
+        </label>
+      </div>
+    </div>
+  </div>
+  <div class="two fields">
+    <div class="field">
+      <div class="ui toggle checkbox">
+        <input type="checkbox" name="term[deliveryReport]" class="hidden"<%= terminal.options.deliveryReport ? ' checked' : '' %>>
+        <label>Delivery report<br/>
+          <small>Request for delivery report for sent message</small>
+        </label>
+      </div>
+    </div>
+    <div class="field">
+      <div class="ui toggle checkbox">
+        <input type="checkbox" name="term[requestReply]" class="hidden"<%= terminal.options.requestReply ? ' checked' : '' %>>
+        <label>Request message reply<br/>
+          <small>Request for reply for sent message</small>
+        </label>
+      </div>
+    </div>
+  </div>
+  <div class="two fields">
+    <div class="field">
+      <div class="ui toggle checkbox">
+        <input type="checkbox" name="term[emptyWhenFull]" class="hidden"<%= terminal.options.emptyWhenFull ? ' checked' : '' %>>
+        <label>Empty message storage when full</label>
+      </div>
+    </div>
+  </div>
+  <h4 class="ui dividing header">Group and priority</h4>
+  <div class="two fields">
+    <div class="field">
+      <label>Group</label>
+      <input type="text" name="term[group]" value="<%= terminal.options.group ? terminal.options.group : '' %>" placeholder="Group">
+    </div>
+    <div class="field">
+      <label>Priority</label>
+      <input type="text" name="term[priority]" value="<%= terminal.options.priority %>" placeholder="Priority">
+    </div>
+  </div>
+  <h4 class="ui dividing header">Operators</h4>
+  <div class="field">
+    <label>Select operators</label>
+    <select name="term[operators][]" class="ui dropdown" multiple>
+    <% terminal.operatorList.forEach((operator) => { -%>
+      <option value="<%= operator %>"<%= terminal.options.operators.indexOf(operator) >= 0 ? ' selected' : '' %>><%= operator %></option>
+    <% }); -%>
+    </select>
+    <small>Select which operators number allowed by this terminal, leave empty to allow all operators</small>
+  </div>
+  <button class="ui primary button" type="submit">Apply</button>
+  <button class="ui right floated labeled icon button btn-ussd"><i class="phone volume icon"></i>USSD</button>
+  <button class="ui right floated labeled icon button btn-message"><i class="envelope icon"></i>Message</button>
+  <button class="ui right floated labeled icon button btn-dial"><i class="phone icon"></i>Dial</button>
+</form>
+<% script.create('jQuery').add(`
+$.term.init('${terminal.name}');
+`); %>
