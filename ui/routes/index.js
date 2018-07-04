@@ -329,15 +329,19 @@ router.post('/tasks/:name', function(req, res, next) {
   const term = req.app.term;
   switch (req.params.name) {
     case 'readmsg':
-      if (term.connected && term.termCon && req.body.type) {
-        term.termCon.emit('check-message', req.body.type);
-        result.success = true;
+      if (req.body.type) {
+        term.pools.forEach((pool) => {
+          if (pool.con) pool.con.emit('check-message', req.body.type);
+        });
+        result.success = term.pools.length ? true : false;
       }
       break;
     case 'report':
-      if (term.connected && term.termCon && req.body.since) {
-        term.termCon.emit('check-report', req.body.since);
-        result.success = true;
+      if (req.body.since) {
+        term.pools.forEach((pool) => {
+          if (pool.con) pool.con.emit('check-report', req.body.since);
+        });
+        result.success = term.pools.length ? true : false;
       }
       break;
   }
