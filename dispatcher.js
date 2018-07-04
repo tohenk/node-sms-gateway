@@ -218,7 +218,7 @@ AppDispatcher.Activity.prototype.getQueues = function(done) {
 }
 
 AppDispatcher.Activity.prototype.check = function() {
-    if (this.appterm.connected) {
+    if (this.appterm.terminals.length) {
         if (this.appterm.gwclients.length == 0 && this.appterm.plugins.length == 0) {
             console.log('Activity processing skipped, no consumer registered.');
         } else {
@@ -250,6 +250,7 @@ AppDispatcher.Activity.prototype.getTerminal = function(type, address, group) {
     const result = [];
     for (var i = 0; i < this.appterm.terminals.length; i++) {
         var term = this.appterm.terminals[i];
+        if (!term.connected) continue;
         if (group && term.options.group != group) continue;
         if (type == AppStorage.ACTIVITY_CALL && !term.options.allowCall) continue;
         if (type == AppStorage.ACTIVITY_SMS && !term.options.sendMessage) continue;

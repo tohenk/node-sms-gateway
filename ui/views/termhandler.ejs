@@ -130,9 +130,9 @@ $.term = {
     },
     clicker: function(cmd, src) {
         var self = this;
-        var cont = src.parents('div.ui.tab');
+        var cont = src.parents('form');
         if (cont.length) {
-            var term = cont.attr('data-tab');
+            var term = cont.attr('data-term');
             switch (cmd) {
                 case 'dial':
                     self.showDialer(term);
@@ -146,8 +146,45 @@ $.term = {
             }
         }
     },
-    apply: function(form) {
+    loadConfig: function(form) {
         var self = this;
+        $.get('/IMSI/config'.replace(/IMSI/, form.attr('data-term')))
+            .then(function(json) {
+                $.each(json, function(key, value) {
+                    var item = null;
+                    switch (key) {
+                        case 'operators':
+                            item = form.find('select[name="term[' + key + '][]"]');
+                            break;
+                        default:
+                            item = form.find('input[name="term[' + key + ']"]');
+                            break;
+                    }
+                    if (item) {
+                        if (item.is('select')) {
+                            item.find('option').each(function() {
+                                var option = $(this);
+                                var optval = option.attr('value');
+                                var selected = value.indexOf(optval) >= 0;
+                                option.prop('selected', selected);
+                                item.dropdown(selected ? 'set selected' : 'remove selected', optval);
+                            });
+                        } else if (item.attr('type') == 'checkbox') {
+                            item.prop('checked', value);
+                        } else {
+                            item.val(value);
+                        }
+                    }
+                });
+            })
+        ;
+    },
+    apply: function(form, terminal, operator) {
+        var self = this;
+        form.attr('action', '/IMSI/apply'.replace(/IMSI/, terminal));
+        form.attr('data-term', terminal);
+        form.attr('data-operator', operator);
+        form.find('.message .header').html(terminal + ' <span class="ui tiny blue label">' + operator + '</span>');
         $.formpost(form, {xhr: true, progress: false});
         form.on('formsaved', function() {
             window.location.reload();
@@ -164,10 +201,11 @@ $.term = {
             e.preventDefault();
             self.clicker('ussd', $(this));
         });
+        self.loadConfig(form);
     },
-    init: function(name) {
+    handle: function(name, operator) {
         var self = this;
-        self.apply($('div[data-tab="' + name + '"] form'));
+        self.apply($('form.term-config'), name, operator);
     }
 }
 `); %>

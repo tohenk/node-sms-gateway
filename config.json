@@ -1,4 +1,10 @@
 {
-    "termkey":"CHANGEME",
-    "secret":"CHANGEME"
+    "secret":"CHANGEME",
+    "pools": [
+        {
+            "name": "localhost",
+            "url": "http://localhost:8000",
+            "key": "CHANGEME"
+        }
+    ]
 }

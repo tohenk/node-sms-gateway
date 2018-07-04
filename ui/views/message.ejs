@@ -10,7 +10,7 @@
   </thead>
 </table>
 <% script.create('jQuery')
-  .useDependencies(['SemanticUI/Loader', 'SemanticUI/Dialog', 'jQuery/Notification'])
+  .useDependencies(['SemanticUI/Loader', 'SemanticUI/Dialog', 'jQuery/Notification', 'jQuery/Util'])
   .add(`
 $.messageView = function(address) {
     if (!$.messageViewDlg) {
@@ -78,13 +78,15 @@ $.messageView = function(address) {
                 var self = this;
                 self.dlg.find('form .content').html(content);
             },
-            statusIcon: function(code) {
-                if (code == null) {
-                    return 'clock';
-                } else if (code == 0) {
-                    return 'green check';
+            statusInfo: function(data) {
+                if (data.code != null) {
+                    return data.code == 0 ? ['green check', 'Message received'] : ['red exclamation', 'Message not received'];
                 } else {
-                    return 'red times';
+                    if (data.processed == 1) {
+                        return data.status == 1 ? ['yellow question', 'Message sent but status unconfirmed'] : ['red times', 'Message failed to sent'];
+                    } else {
+                        return ['clock', 'Message is waiting for processing'];
+                    }
                 }
             },
             load: function() {
@@ -96,22 +98,33 @@ $.messageView = function(address) {
                             contents.push('<div class="ui horizontal divider">' + time + '</div>');
                             contents.push('<div class="ui divided feed">');
                             $.each(json[time], function(i, v) {
-                                if (v.type == 3) {
-                                    contents.push('<div class="event">' +
+                                if (v.type == ${term.Storage.ACTIVITY_SMS}) {
+                                    var info = self.statusInfo(v);
+                                    contents.push($.util.template('<div class="event">' +
                                             '<div class="label"><i class="circular blue envelope icon"></i></div>' +
                                             '<div class="content">' +
-                                                '<div class="summary">' + v.message + '</div>' +
-                                                '<div class="extra text"><small>Sent via ' + v.imsi + ' <i class="' + self.statusIcon(v.code) + ' icon"></i></small></div>' +
+                                                '<div class="summary">%MESSAGE%</div>' +
+                                                '<div class="extra text"><small>Sent via %IMSI% <span class="ui mini label">%OPERATOR%</span> <i class="%ICON% icon" title="%INFO%"></i></small></div>' +
                                             '</div>' +
-                                        '</div>');
+                                        '</div>', {
+                                        MESSAGE: v.message,
+                                        IMSI: v.imsi,
+                                        OPERATOR: v.operator,
+                                        ICON: info[0],
+                                        INFO: info[1]
+                                    }));
                                 } else {
-                                    contents.push('<div class="event">' +
+                                    contents.push($.util.template('<div class="event">' +
                                             '<div class="content">' +
-                                                '<div class="summary">' + v.message + '</div>' +
-                                                '<div class="extra text"><small>Received via ' + v.imsi + '</small></div>' +
+                                                '<div class="summary">%MESSAGE%</div>' +
+                                                '<div class="extra text"><small>Received via %IMSI% <span class="ui mini label">%OPERATOR%</span></small></div>' +
                                             '</div>' +
                                             '<div class="label"><i class="circular green envelope icon"></i></div>' +
-                                        '</div>');
+                                        '</div>', {
+                                        MESSAGE: v.message,
+                                        IMSI: v.imsi,
+                                        OPERATOR: v.operator
+                                    }));
                                 }
                             });
                             contents.push('</div>');

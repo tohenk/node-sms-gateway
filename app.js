@@ -31,7 +31,8 @@ const Cmd           = require('./lib/cmd');
 
 Cmd.addBool('help', 'h', 'Show program usage').setAccessible(false);
 Cmd.addVar('config', '', 'Read app configuration from file', 'config-file');
-Cmd.addVar('url', 'u', 'Use terminal at URL', 'url');
+Cmd.addVar('url', 'u', 'Use terminal at URL if no configuration supplied', 'url');
+Cmd.addVar('key', 'k', 'Terminal secret key', 'key');
 Cmd.addVar('port', 'p', 'Set web server port to listen', 'port');
 Cmd.addVar('plugins', '', 'Load plugins at start, separate each plugin with comma', 'plugins');
 
@@ -66,8 +67,6 @@ if (configFile) {
 // check for default configuration
 if (!config.database)
     config.database = database;
-if (!config.url)
-    config.url = 'http://localhost:8000';
 if (!config.countryCode)
     config.countryCode = '62';
 if (!config.operatorFilename)
@@ -93,6 +92,14 @@ if (!config.database.logging) {
     }
 }
 config.plugins = Cmd.get('plugins');
+// check pools
+if (!config.pools) {
+    config.pools = [{
+        name: 'localhost',
+        url: Cmd.get('url') || 'http://localhost:8000',
+        key: Cmd.get('key') || ''
+    }]
+}
 
 AppTerm.init(config).then(() => {
     run();

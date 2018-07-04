@@ -6,7 +6,8 @@ const moment  = require('moment');
 
 function getQueue(req, res, next) {
   const result = {};
-  const stor = req.app.term.Storage;
+  const term = req.app.term;
+  const stor = term.Storage;
   const page = req.params.page || 1;
   const pageSize = 25;
   stor.GwQueue.count().then((count) => {
@@ -42,7 +43,8 @@ function getQueue(req, res, next) {
 
 function getMessage(req, res, next) {
   const result = {};
-  const stor = req.app.term.Storage;
+  const term = req.app.term;
+  const stor = term.Storage;
   const page = req.params.page || 1;
   const pageSize = 25;
   stor.countRecents().then((count) => {
@@ -74,7 +76,8 @@ function getMessage(req, res, next) {
 
 function readMessage(req, res, next) {
   const result = {};
-  const stor = req.app.term.Storage;
+  const term = req.app.term;
+  const stor = term.Storage;
   stor.GwQueue.findAll({
     where: {
       address: req.params.number,
@@ -86,9 +89,13 @@ function readMessage(req, res, next) {
     results.forEach((GwQueue) => {
       messages[GwQueue.hash] = {
         imsi: GwQueue.imsi,
+        operator: term.getNetworkOperator(GwQueue.imsi),
         hash: GwQueue.hash,
         type: GwQueue.type,
         message: GwQueue.data,
+        processed: GwQueue.processed,
+        status: GwQueue.status,
+        code: null,
         time: GwQueue.time
       };
     });
@@ -243,6 +250,16 @@ router.post('/:imsi/apply', function(req, res, next) {
       result.notice = 'Your changes has been successfuly applied.';
     }
     res.json(result);
+  } else {
+    next();
+  }
+});
+
+router.get('/:imsi/config', function(req, res, next) {
+  const term = req.app.term;
+  const terminal = term.get(req.params.imsi);
+  if (terminal) {
+    res.json(terminal.options);
   } else {
     next();
   }

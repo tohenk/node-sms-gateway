@@ -42,12 +42,12 @@ AppTerm.ClientRoom = 'clients';
 
 AppTerm.init = function(config) {
     this.config = config;
-    this.url = config.url;
     this.operatorFilename = config.operatorFilename;
     this.configdir = config.configdir;
     this.countryCode = config.countryCode;
-    this.connected = false;
+    this.pools = [];
     this.terminals = [];
+    this.groups = [];
     this.gwclients = [];
     this.plugins = [];
     this.dispatcher = new AppDispatcher.Activity(this);
@@ -150,24 +150,33 @@ AppTerm.getOperator = function(number) {
     return result;
 }
 
-AppTerm.buildTerminal = function(terms) {
-    this.resetTerminal();
-    terms.forEach((imsi) => {
-        var con = this.clientIo(this.url + '/' + imsi);
-        var term = new this.Terminal(imsi, con, {
-            configFilename: path.join(this.configdir, imsi + '.cfg')
-        });
-        term.operatorList = Object.keys(this.operators);
-        this.terminals.push(term);
-    });
+AppTerm.getNetworkOperator = function(imsi) {
+    const term = this.get(imsi);
+    if (term) return term.info.network.operator;
 }
 
-AppTerm.resetTerminal = function() {
-    this.terminals.forEach((term) => {
-        delete term.dispatcher;
-        term.con.disconnect();
-    });
+AppTerm.changed = function() {
     this.terminals = [];
+    this.groups = {};
+    this.pools.forEach((pool) => {
+        pool.terminals.forEach((term) => {
+            const group = term.options.group || '';
+            this.terminals.push(term);
+            if (!this.groups[group]) this.groups[group] = [];
+            this.groups[group].push(term);
+        });
+    });
+    if (this.plugins.length) {
+        this.dispatcher.reload();
+    }
+}
+
+AppTerm.setTermIo = function(io) {
+    this.clientIo = io;
+    this.config.pools.forEach((pool) => {
+        const p = new this.Pool(this, pool);
+        this.pools.push(p);
+    });
     return this;
 }
 
@@ -281,82 +290,6 @@ AppTerm.handleMessageRetry = function(socket, data) {
     });
 }
 
-AppTerm.setTermIo = function(io) {
-    this.clientIo = io;
-    this.termCon = this.clientIo(this.url + '/ctrl');
-    const done = (result) => {
-        if (result) {
-            this.uiCon.emit('new-activity', result.type);
-            this.dispatcher.reload();
-        }
-    }
-    this.termCon.on('connect', () => {
-        console.log('Connected to terminal: %s', this.url);
-        this.connected = true;
-        this.termCon.emit('auth', this.config.termkey);
-    });
-    this.termCon.on('disconnect', () => {
-        console.log('Disconnected from: %s', this.url);
-        this.connected = false;
-        this.resetTerminal();
-    });
-    this.termCon.on('auth', (success) => {
-        if (success) {
-            this.termCon.emit('init');
-        } else {
-            console.log('Authentication failed!');
-        }
-    });
-    this.termCon.on('ready', (terms) => {
-        console.log('Terminal ready: %s', util.inspect(terms));
-        this.buildTerminal(terms);
-        if (this.plugins.length) {
-            this.dispatcher.reload();
-        }
-        this.termCon.emit('check-pending');
-    });
-    this.termCon.on('status-report', (data) => {
-        this.log('<-- REPORT: %s', util.inspect(data));
-        AppStorage.updateReport(data.imsi, data);
-        if (this.gwCon) {
-            this.gwCon.to(this.ClientRoom).emit('status-report', data);
-        }
-    });
-    this.termCon.on('message', (data) => {
-        this.log('<-- MESSAGE: %s', util.inspect(data));
-        AppStorage.saveQueue(data.imsi, {
-            hash: data.hash,
-            type: AppStorage.ACTIVITY_INBOX,
-            address: data.address,
-            data: data.data
-        }, done);
-    });
-    this.termCon.on('ussd', (data) => {
-        this.log('<-- USSD: %s', util.inspect(data));
-        AppStorage.saveQueue(data.imsi, {
-            hash: data.hash,
-            type: AppStorage.ACTIVITY_CUSD,
-            address: data.address,
-            data: data.data
-        }, done);
-        this.uiCon.emit('ussd', {
-            imsi: data.imsi,
-            address: data.address,
-            message: data.data
-        });
-    });
-    this.termCon.on('ring', (data) => {
-        this.log('<-- RING: %s', util.inspect(data));
-        AppStorage.saveQueue(data.imsi, {
-            hash: data.hash,
-            type: AppStorage.ACTIVITY_RING,
-            address: data.address,
-            data: null
-        }, done);
-    });
-    return this;
-}
-
 AppTerm.log = function() {
     var args = Array.from(arguments);
     if (args.length) {
@@ -367,6 +300,109 @@ AppTerm.log = function() {
         const message = util.format.apply(null, args);
         this.uiCon.emit('activity', {time: Date.now(), message: message});
     }
+}
+
+// Pool
+
+AppTerm.Pool = function(parent, options) {
+    this.parent = parent;
+    this.name = options.name;
+    this.url = options.url;
+    this.key = options.key;
+    this.terminals = [];
+    this.init();
+}
+
+AppTerm.Pool.prototype.init = function() {
+    this.con = this.parent.clientIo(this.url + '/ctrl');
+    const done = (result) => {
+        if (result) {
+            this.parent.uiCon.emit('new-activity', result.type);
+            this.parent.dispatcher.reload();
+        }
+    }
+    this.con.on('connect', () => {
+        console.log('Connected to terminal: %s', this.url);
+        this.con.emit('auth', this.key);
+    });
+    this.con.on('disconnect', () => {
+        console.log('Disconnected from: %s', this.url);
+        this.reset(true);
+    });
+    this.con.on('auth', (success) => {
+        if (success) {
+            this.con.emit('init');
+        } else {
+            console.log('Authentication failed!');
+        }
+    });
+    this.con.on('ready', (terms) => {
+        console.log('Terminal ready: %s', util.inspect(terms));
+        this.build(terms);
+        this.con.emit('check-pending');
+    });
+    this.con.on('status-report', (data) => {
+        this.parent.log('<-- REPORT: %s', util.inspect(data));
+        AppStorage.updateReport(data.imsi, data);
+        if (this.parent.gwCon) {
+            this.parent.gwCon.to(this.parent.ClientRoom).emit('status-report', data);
+        }
+    });
+    this.con.on('message', (data) => {
+        this.parent.log('<-- MESSAGE: %s', util.inspect(data));
+        AppStorage.saveQueue(data.imsi, {
+            hash: data.hash,
+            type: AppStorage.ACTIVITY_INBOX,
+            address: data.address,
+            data: data.data
+        }, done);
+    });
+    this.con.on('ussd', (data) => {
+        this.parent.log('<-- USSD: %s', util.inspect(data));
+        AppStorage.saveQueue(data.imsi, {
+            hash: data.hash,
+            type: AppStorage.ACTIVITY_CUSD,
+            address: data.address,
+            data: data.data
+        }, done);
+        this.parent.uiCon.emit('ussd', {
+            imsi: data.imsi,
+            address: data.address,
+            message: data.data
+        });
+    });
+    this.con.on('ring', (data) => {
+        this.parent.log('<-- RING: %s', util.inspect(data));
+        AppStorage.saveQueue(data.imsi, {
+            hash: data.hash,
+            type: AppStorage.ACTIVITY_RING,
+            address: data.address,
+            data: null
+        }, done);
+    });
+}
+
+AppTerm.Pool.prototype.build = function(terms) {
+    this.reset();
+    terms.forEach((imsi) => {
+        var con = this.parent.clientIo(this.url + '/' + imsi);
+        var term = new AppTerm.Terminal(imsi, con, {
+            configFilename: path.join(this.parent.configdir, imsi + '.cfg')
+        });
+        term.operatorList = Object.keys(this.parent.operators);
+        this.terminals.push(term);
+    });
+    this.parent.changed();
+}
+
+AppTerm.Pool.prototype.reset = function(update) {
+    this.terminals.forEach((term) => {
+        delete term.dispatcher;
+        term.con.disconnect();
+    });
+    this.terminals = [];
+    if (update) this.parent.changed();
+    return this;
 }
 
 // Terminal
