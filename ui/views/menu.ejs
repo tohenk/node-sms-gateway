@@ -1,4 +1,4 @@
-<% block('mainmenu', menu({
+<% menus = {
     branding: {
         type: 'brand',
         title: apptitle,
@@ -23,7 +23,17 @@
             }
         }
     }
-}, {mainmenu: true, indentation: 2})); %>
+} %>
+<% if(user.authenticated) {
+    menus.tasks.items.divider2 = {
+        type: 'divider'
+    }
+    menus.tasks.items.logout = {
+        title: 'Logout',
+        url: '/logout'
+    }
+} %>
+<% block('mainmenu', menu(menus, {mainmenu: true, indentation: 2})); %>
 <% script.create('jQuery')
   .useDependencies(['jQuery/Util', 'jQuery/Notification', 'SemanticUI/Calendar', 'SemanticUI/Dialog/Message'])
   .add(`
