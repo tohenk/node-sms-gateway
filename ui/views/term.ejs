@@ -128,6 +128,7 @@
 </div>
 <% script.create('jQuery')
   .add(`
+$.term.init();
 $('a[data-term]').on('click', function(e) {
     e.preventDefault();
     var a = $(this);

@@ -243,6 +243,13 @@ router.post('/:imsi/apply', function(req, res, next) {
     if (isNaN(parameters.term.priority)) {
       result.success = false;
     } else {
+      // check boolean operators
+      const options = terminal.defaultOptions();
+      Object.keys(options).forEach((opt) => {
+        if (typeof options[opt] == 'boolean' && !parameters.term[opt]) {
+          parameters.term[opt] = false;
+        }
+      });
       parameters.term.priority = parseInt(parameters.term.priority);
       if (!parameters.term.operators) parameters.term.operators = [];
       terminal.readOptions(parameters.term);

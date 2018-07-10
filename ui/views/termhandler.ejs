@@ -146,18 +146,18 @@ $.term = {
             }
         }
     },
-    loadConfig: function(form) {
+    loadConfig: function() {
         var self = this;
-        $.get('/IMSI/config'.replace(/IMSI/, form.attr('data-term')))
+        $.get('/IMSI/config'.replace(/IMSI/, self.form.attr('data-term')))
             .then(function(json) {
                 $.each(json, function(key, value) {
                     var item = null;
                     switch (key) {
                         case 'operators':
-                            item = form.find('select[name="term[' + key + '][]"]');
+                            item = self.form.find('select[name="term[' + key + '][]"]');
                             break;
                         default:
-                            item = form.find('input[name="term[' + key + ']"]');
+                            item = self.form.find('input[name="term[' + key + ']"]');
                             break;
                     }
                     if (item) {
@@ -179,33 +179,33 @@ $.term = {
             })
         ;
     },
-    apply: function(form, terminal, operator) {
+    handle: function(terminal, operator) {
         var self = this;
-        form.attr('action', '/IMSI/apply'.replace(/IMSI/, terminal));
-        form.attr('data-term', terminal);
-        form.attr('data-operator', operator);
-        form.find('.message .header').html(terminal + ' <span class="ui tiny blue label">' + operator + '</span>');
-        $.formpost(form, {xhr: true, progress: false});
-        form.on('formsaved', function() {
+        self.form.attr('action', '/IMSI/apply'.replace(/IMSI/, terminal));
+        self.form.attr('data-term', terminal);
+        self.form.attr('data-operator', operator);
+        self.form.find('.message .header').html(terminal + ' <span class="ui tiny blue label">' + operator + '</span>');
+        self.loadConfig();
+    },
+    init: function() {
+        var self = this;
+        self.form = $('form.term-config');
+        $.formpost(self.form, {xhr: true, progress: false});
+        self.form.on('formsaved', function() {
             window.location.reload();
         });
-        form.find('.btn-dial').on('click', function(e) {
+        self.form.find('.btn-dial').on('click', function(e) {
             e.preventDefault();
             self.clicker('dial', $(this));
         });
-        form.find('.btn-message').on('click', function(e) {
+        self.form.find('.btn-message').on('click', function(e) {
             e.preventDefault();
             self.clicker('message', $(this));
         });
-        form.find('.btn-ussd').on('click', function(e) {
+        self.form.find('.btn-ussd').on('click', function(e) {
             e.preventDefault();
             self.clicker('ussd', $(this));
         });
-        self.loadConfig(form);
-    },
-    handle: function(name, operator) {
-        var self = this;
-        self.apply($('form.term-config'), name, operator);
     }
 }
 `); %>
