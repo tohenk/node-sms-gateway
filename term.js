@@ -77,9 +77,7 @@ AppTerm.get = function(imsi) {
 AppTerm.initializeLogger = function() {
     this.logdir = this.config.logdir || path.join(__dirname, 'logs');
     this.logfile = path.join(this.logdir, 'activity.log');
-    this.stdout = new fs.createWriteStream(this.logfile, {
-        flags: fs.existsSync(this.logfile) ? 'r+' : 'w'
-    });
+    this.stdout = new fs.createWriteStream(this.logfile, {flags: 'a'});
     this.logger = new console.Console(this.stdout);
 }
 
