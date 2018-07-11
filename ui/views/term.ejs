@@ -1,14 +1,14 @@
 <div class="ui stackable grid">
   <div class="row">
     <div class="four wide column">
+      <div class="ui fluid vertical pointing menu">
       <%_ Object.keys(term.groups).forEach((group) => { -%>
-      <h5 class="ui top attached header"><%= group ? group : 'ALL' %></h5>
-      <%_ term.groups[group].forEach((terminal) => { -%>
-      <div class="ui attached segment">
-        <a href="#" data-term="<%= terminal.name %>" data-operator="<%= terminal.info.network.operator %>"><i class="desktop icon"></i> <%= terminal.name %> <div class="ui blue tiny label"><%= terminal.info.network.operator %></div></a>
+        <div class="item header"><%= group ? group : 'ALL' %></div>
+        <%_ term.groups[group].forEach((terminal) => { -%>
+        <a href="#" class="item" data-term="<%= terminal.name %>" data-operator="<%= terminal.info.network.operator %>"><i class="desktop icon"></i> <%= terminal.name %> <div class="ui tiny label"><%= terminal.info.network.operator %></div></a>
+        <%_ }); -%>
+        <%_ }); -%>
       </div>
-      <%_ }); -%>
-      <%_ }); -%>
     </div>
     <div class="twelve wide column">
       <form class="ui form term-config">
@@ -132,8 +132,8 @@ $.term.init();
 $('a[data-term]').on('click', function(e) {
     e.preventDefault();
     var a = $(this);
-    a.parent().siblings('.segment').removeClass('secondary');
-    a.parent().addClass('secondary');
+    a.siblings('a').removeClass('active');
+    a.addClass('active');
     $.term.handle(a.attr('data-term'), a.attr('data-operator'));
 }).filter(':first').click();
 `); %>
