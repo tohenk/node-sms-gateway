@@ -341,7 +341,6 @@ AppTerm.Pool.prototype.init = function() {
     this.con.on('ready', (terms) => {
         console.log('Terminal ready: %s', util.inspect(terms));
         this.build(terms);
-        this.con.emit('check-pending');
     });
     this.con.on('status-report', (data) => {
         this.parent.log('<-- REPORT: %s', util.inspect(data));
@@ -384,6 +383,12 @@ AppTerm.Pool.prototype.init = function() {
     });
 }
 
+AppTerm.Pool.prototype.checkPending = function() {
+    if (this.con && this.terminals.length) {
+        this.con.emit('check-pending');
+    }
+}
+
 AppTerm.Pool.prototype.build = function(terms) {
     this.reset();
     terms.forEach((imsi) => {
@@ -394,6 +399,19 @@ AppTerm.Pool.prototype.build = function(terms) {
         term.operatorList = Object.keys(this.parent.operators);
         this.terminals.push(term);
     });
+    var timeout;
+    (ready = () => {
+        var readyCnt = 0;
+        this.terminals.forEach((term) => {
+            if (term.connected) readyCnt++;
+        });
+        if (terms.length && readyCnt == terms.length) {
+            if (timeout != undefined) clearTimeout(timeout);
+            this.checkPending();
+        } else {
+            timeout = setTimeout(ready, 500);
+        }
+    })();
     this.parent.changed();
 }
 
