@@ -1,0 +1,19 @@
+{
+    "51001": {
+        "ussd": "*123#",
+        "response": "Pulsa Rp (\\d+) s/d ((\\d{2})\\.(\\d{2})\\.(\\d{4}))"
+    },
+    "51010": {
+        "ussd": "*888#",
+        "response": "Sisa pulsa Rp\\.(\\d+)\\.Aktif sd ([0-9/]+)"
+    },
+    "51011": {
+        "ussd": "*123#",
+        "response": "Pulsa (\\d+) s\\.d ((\\d+)([a-zA-Z]+)(\\d+))"
+    },
+    "51089": {
+        "ussd": "*123#",
+        "response": "(\\d+) Pulsa\\:Rp(\\d+),Bonus:(\\d+) s/d ((\\d{2})\\-([A-Z]{3})\\-(\\d{2}))",
+        "matches": [2, 4]
+    }
+}
