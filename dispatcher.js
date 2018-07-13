@@ -325,7 +325,7 @@ AppDispatcher.Activity.prototype.processQueue = function(GwQueue, done) {
                 });
             }
             this.appterm.plugins.forEach((plugin) => {
-                if (term.options.group == plugin.group) {
+                if (plugin.group == undefined || term.options.group == plugin.group) {
                     plugin.handle(GwQueue);
                     if (GwQueue.veto) {
                         return true;

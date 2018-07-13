@@ -101,6 +101,10 @@ AppTerm.loadPlugins = function() {
             if (typeof p == 'function') {
                 var instance = new p(this);
                 if (instance.name && typeof instance.handle == 'function') {
+                    instance.src = pluginSrc;
+                    if (typeof instance.initialize == 'function') {
+                        instance.initialize();
+                    }
                     this.plugins.push(instance);
                     console.log('Plugin loaded: %s', plugin);
                 } else {

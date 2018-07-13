@@ -41,6 +41,7 @@ app.use(require('./lib/helper/pager')());
 // routes
 app.use('/', require('./routes/index'));
 app.use('/', require('./routes/security'));
+app.use('/', require('./routes/plugin'));
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
