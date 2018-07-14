@@ -1,7 +1,8 @@
-<div class="ui top attached tabular menu">
+<div class="ui top attached stackable tabular menu">
   <a class="active item" data-tab="queue">Queue</a>
   <a class="item" data-tab="message">Message</a>
   <a class="item" data-tab="log">Logs</a>
+  <a class="item" data-tab="client">Clients <span class="ui tiny label">0</span></a>
   <% if (term.terminals.length) { %><a class="item" data-tab="terminal">Terminal <span class="ui tiny label"><%= term.terminals.length %></span></a><% } %>
   <% if (term.plugins.length) { %><a class="item" data-tab="plugin">Plugins <span class="ui tiny label"><%= term.plugins.length %></span></a><% } %>
 </div>
@@ -13,6 +14,9 @@
 </div>
 <div class="ui bottom attached tab segment" data-tab="log">
   <%- include('log') %>
+</div>
+<div class="ui bottom attached tab segment" data-tab="client">
+  <%- include('client') %>
 </div>
 <% if (term.terminals.length) { %>
 <%- include('termhandler') %>
@@ -52,6 +56,9 @@ $.uiCon = {
         self.socket.on('activity', function(data) {
             $.log.add(data);
         });
+        self.socket.on('client', function(data) {
+            $.client.load();
+        });
         self.socket.on('new-activity', function(type) {
             $.queue.load();
             if (type == ${term.Storage.ACTIVITY_SMS} || type == ${term.Storage.ACTIVITY_INBOX}) {
@@ -70,6 +77,7 @@ $('select.dropdown').dropdown();
 $.queue.load();
 $.message.load();
 $.log.load();
+$.client.load();
 $.tasks.init();
 $.uiCon.init();
 `); %>

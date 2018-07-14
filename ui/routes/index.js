@@ -211,6 +211,22 @@ router.get('/activity-log', function(req, res, next) {
   getActivityLog(req, res, next);
 });
 
+router.get('/client', function(req, res, next) {
+  const result = [];
+  const term = req.app.term;
+  var nr = 0;
+  term.gwclients.forEach((socket) => {
+    const info = {
+      nr: ++nr,
+      id: socket.id,
+      address: socket.handshake.address,
+      group: socket.group
+    }
+    result.push(info);
+  });
+  res.json({items: result});
+});
+
 router.post('/send-message', function(req, res, next) {
   const result = {};
   const term = req.app.term;

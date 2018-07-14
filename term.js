@@ -206,6 +206,7 @@ AppTerm.setSocketIo = function(io) {
             const idx = this.gwclients.indexOf(socket);
             if (idx >= 0) {
                 this.gwclients.splice(idx, 1);
+                if (this.uiCon) this.uiCon.emit('client');
             }
         });
         socket.on('auth', (secret) => {
@@ -216,6 +217,7 @@ AppTerm.setSocketIo = function(io) {
                 this.gwclients.push(socket);
                 this.dispatcher.reload();
                 socket.join(this.ClientRoom);
+                if (this.uiCon) this.uiCon.emit('client');
             } else {
                 console.log('Client is NOT authenticated: %s', socket.id);
             }
