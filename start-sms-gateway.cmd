@@ -1,3 +1,3 @@
 @echo off
-node app.js --plugins=log
+node app.js --plugins=prepaid
 pause
