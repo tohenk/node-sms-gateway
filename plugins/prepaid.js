@@ -30,6 +30,7 @@ module.exports = exports = PluginPrepaid;
 
 const fs = require('fs');
 const path = require('path');
+const moment = require('moment');
 
 const ACTIVITY_CALL = 1;
 const ACTIVITY_RING = 2;
@@ -87,6 +88,21 @@ PluginPrepaid.prototype.parse = function(queue, data) {
     }
 }
 
+PluginPrepaid.prototype.formatInfo = function(info) {
+    if (typeof info.time == 'string') {
+        try {
+            const time = new Date(info.time);
+            info.time = time;
+        }
+        catch (e) {
+            console.log(e.message);
+        }
+    }
+    if (info.time instanceof Date) {
+        info.time = moment(info.time).format('DD MMM YYYY HH:mm');
+    }
+}
+
 PluginPrepaid.prototype.handle = function(queue) {
     if (queue.type == ACTIVITY_CUSD) {
         const term = this.appterm.get(queue.imsi);
@@ -115,6 +131,7 @@ PluginPrepaid.prototype.router = function(req, res, next) {
                 info.active = this.data[term.name].active ? this.data[term.name].active : null,
                 info.time = this.data[term.name].time ? this.data[term.name].time : null;
             }
+            this.formatInfo(info);
             items.push(info);
         });
         res.render('prepaid', {items: items});
