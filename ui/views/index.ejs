@@ -60,7 +60,7 @@ $.uiCon = {
             $.client.load();
         });
         self.socket.on('new-activity', function(type) {
-            $.queue.load();
+            $.gwqueue.load();
             if (type == ${term.Storage.ACTIVITY_SMS} || type == ${term.Storage.ACTIVITY_INBOX}) {
                 $.message.load();
             }
@@ -74,7 +74,7 @@ $.uiCon = {
 $('.menu .item').tab();
 $('.ui.checkbox').checkbox();
 $('select.dropdown').dropdown();
-$.queue.load();
+$.gwqueue.load();
 $.message.load();
 $.log.load();
 $.client.load();

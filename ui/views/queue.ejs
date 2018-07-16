@@ -15,7 +15,7 @@
 <% script.create('jQuery')
   .useDependencies('SemanticUI/Loader')
   .add(`
-$.queue = $.loader($('div[data-tab="queue"] table'), {
+$.gwqueue = $.loader($('div[data-tab="queue"] table'), {
     url: '/queue/PAGE',
     formatRow: function(item) {
         return $('<tr><td>' + item.nr + '</td>' +
