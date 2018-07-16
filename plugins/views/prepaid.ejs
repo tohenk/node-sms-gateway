@@ -34,6 +34,7 @@
   .add(`
 $('tr[data-imsi] button').on('click', function(e) {
     e.preventDefault();
+    $(this).prop('disabled', true);
     var row = $(this).parents('tr');
     var imsi = row.attr('data-imsi');
     if (imsi) {
