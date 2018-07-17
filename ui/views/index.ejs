@@ -55,6 +55,7 @@ $.uiCon = {
         });
         self.socket.on('activity', function(data) {
             $.log.add(data);
+            $.gwqueue.load();
         });
         self.socket.on('client', function(data) {
             $.client.load();
