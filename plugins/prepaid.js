@@ -84,6 +84,7 @@ PluginPrepaid.prototype.parse = function(queue, data) {
         if (!this.data[queue.imsi]) this.data[queue.imsi] = {};
         Object.assign(this.data[queue.imsi], info);
         this.writeData();
+        this.formatInfo(info);
         this.appterm.uiCon.emit('prepaid', queue.imsi, info);
     }
 }
