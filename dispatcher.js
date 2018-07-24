@@ -276,6 +276,9 @@ AppDispatcher.Activity.prototype.process = function() {
         this.once('queue', (queue) => {
             this.processQueue(queue, () => {
                 this.processing = false;
+                if (this.appterm.uiCon) {
+                    this.appterm.uiCon.emit('queue-processed', queue);
+                }
                 this.check();
             });
         });

@@ -66,6 +66,9 @@ $.uiCon = {
                 $.message.load();
             }
         });
+        self.socket.on('queue-processed', function(data) {
+            $.gwqueue.load();
+        });
         self.socket.on('ussd', function(data) {
             $.term.receiveUssd(data);
         });
