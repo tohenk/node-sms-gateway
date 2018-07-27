@@ -69,6 +69,10 @@ $.term = {
             });
             self.msgaddress = self.msgdlg.find('input[name="address"]');
             self.msgtext = self.msgdlg.find('textarea[name="message"]');
+            self.msgdlg.find('form').on('submit', function(e) {
+                e.preventDefault();
+                self.msgdlg.find('div.green.button').click();
+            });
         }
         self.msgaddress.val('');
         self.msgtext.val('');
@@ -114,6 +118,10 @@ $.term = {
             });
             self.ussdservice = self.ussddlg.find('input[name="service"]');
             self.ussdfeedback = self.ussddlg.find('textarea[name="feedback"]');
+            self.ussddlg.find('form').on('submit', function(e) {
+                e.preventDefault();
+                self.ussddlg.find('div.green.button').click();
+            });
         }
         self.ussdservice.val('');
         self.ussdfeedback.val('');

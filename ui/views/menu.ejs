@@ -97,6 +97,10 @@ $.tasks = {
                 }
             });
             self.readmsgdlg.find('select.dropdown').dropdown();
+            self.readmsgdlg.find('form').on('submit', function(e) {
+                e.preventDefault();
+                self.readmsgdlg.find('div.green.button').click();
+            });
         }
         $.ntdlg.show(self.readmsgdlg);
     },
@@ -138,6 +142,10 @@ $.tasks = {
                 }
             });
             self.checkrptdlg.find('.ui.calendar').calendar({type: 'datetime'});
+            self.checkrptdlg.find('form').on('submit', function(e) {
+                e.preventDefault();
+                self.checkrptdlg.find('div.green.button').click();
+            });
         }
         $.ntdlg.show(self.checkrptdlg);
     },
