@@ -225,7 +225,7 @@ router.get('/client', function(req, res, next) {
     }
     result.push(info);
   });
-  res.json({items: result});
+  res.json({count: result.length, items: result});
 });
 
 router.post('/send-message', function(req, res, next) {
