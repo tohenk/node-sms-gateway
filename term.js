@@ -196,6 +196,7 @@ AppTerm.setSocketIo = function(io) {
     this.gwCon = this.serverIo.of('/gw');
     this.gwCon.on('connection', (socket) => {
         console.log('Gateway client connected: %s', socket.id);
+        socket.time = new Date();
         const timeout = setTimeout(() => {
             console.log('Closing connection due to no auth: %s', socket.id);
             socket.disconnect();

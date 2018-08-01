@@ -220,6 +220,7 @@ router.get('/client', function(req, res, next) {
       nr: ++nr,
       id: socket.id,
       address: socket.handshake.address,
+      time: socket.time ? moment(socket.time).format('DD MMM YYYY HH:mm') : null,
       group: socket.group
     }
     result.push(info);
