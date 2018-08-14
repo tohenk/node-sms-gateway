@@ -30,7 +30,6 @@
   <%- include('plugin') %>
 </div>
 <% } %>
-<%- include('menu') %>
 <% script.create('jQuery')
   .useDependencies(['SocketIO', 'SemanticUI/Dialog/Wait', 'SemanticUI/Dialog/Input'])
   .add(`
@@ -82,6 +81,5 @@ $.gwqueue.load();
 $.message.load();
 $.log.load();
 $.client.load();
-$.tasks.init();
 $.uiCon.init();
 `); %>

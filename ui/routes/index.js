@@ -171,7 +171,7 @@ function getParameters(data) {
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', {
+  res.render('index/index', {
     title: 'Dashboard',
     sockaddress: `${req.protocol}://${req.get('host')}/ui`
   });
