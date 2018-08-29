@@ -39,9 +39,10 @@ AppDispatcher.Dispatcher = function() {
     EventEmitter.call(this);
     this.count = 0;
     this.queues = [];
+    this.inqueues = [];
     this.loading = false;
     this.loadTime = Date.now();
-    this.reloadInterval = 5 * 60 * 1000; // 5 minute
+    this.reloadInterval = 5 * 60 * 1000; // 5 minutes
 }
 
 util.inherits(AppDispatcher.Dispatcher, EventEmitter);
@@ -53,10 +54,10 @@ AppDispatcher.Dispatcher.prototype.reload = function() {
 }
 
 AppDispatcher.Dispatcher.prototype.load = function() {
-    if (this.count > 0) {
+    if (this.count > 0 && !this.loading) {
+        this.loading = true;
         this.count = 0;
         this.queues = [];
-        this.loading = true;
         this.getQueues((results) => {
             this.loading = false;
             this.loadTime = Date.now();
@@ -67,6 +68,22 @@ AppDispatcher.Dispatcher.prototype.load = function() {
 }
 
 AppDispatcher.Dispatcher.prototype.getQueues = function(done) {
+}
+
+AppDispatcher.Dispatcher.prototype.inQueue = function(item) {
+    const result = this.inqueues.indexOf(item) >= 0 ? true : false;
+    if (!result) {
+        this.inqueues.push(item);
+    }
+    return result;
+}
+
+AppDispatcher.Dispatcher.prototype.endQueue = function(item) {
+    const index = this.inqueues.indexOf(item);
+    if (index >= 0) {
+        this.inqueues.splice(index, 1);
+    }
+    return this;
 }
 
 AppDispatcher.Dispatcher.prototype.check = function() {
@@ -91,8 +108,10 @@ AppDispatcher.Terminal = function(term) {
         this.reloadNeeded();
         if (this.queues.length && !this.term.busy) {
             const queue = this.queues.shift();
-            console.log('Processing queue: %s <= %s (%d)', queue.imsi, queue.hash, queue.id);
-            this.process(queue);
+            if (!this.inQueue(queue.id)) {
+                console.log('Processing queue: %s <= %s (%d)', queue.imsi, queue.hash, queue.id);
+                this.process(queue);
+            }
         }
         this.check();
     });
@@ -148,6 +167,7 @@ AppDispatcher.Terminal.prototype.update = function(GwQueue, success) {
         if (GwQueue.type != AppStorage.ACTIVITY_USSD) {
             AppStorage.saveLog(GwQueue.imsi, result);
         }
+        this.endQueue(GwQueue.id);
     });
 }
 
