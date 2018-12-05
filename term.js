@@ -34,6 +34,7 @@ const path          = require('path');
 const util          = require('util');
 const EventEmitter  = require('events');
 const ntUtil        = require('./lib/util');
+const ntLogger      = require('./lib/logger');
 const AppStorage    = require('./storage');
 const AppDispatcher = require('./dispatcher');
 
@@ -77,8 +78,7 @@ AppTerm.get = function(imsi) {
 AppTerm.initializeLogger = function() {
     this.logdir = this.config.logdir || path.join(__dirname, 'logs');
     this.logfile = path.join(this.logdir, 'activity.log');
-    this.stdout = new fs.createWriteStream(this.logfile, {flags: 'a'});
-    this.logger = new console.Console(this.stdout);
+    this.logger = new ntLogger(this.logfile);
 }
 
 AppTerm.loadPlugins = function() {
@@ -298,15 +298,13 @@ AppTerm.handleMessageRetry = function(socket, data) {
 }
 
 AppTerm.log = function() {
-    var args = Array.from(arguments);
-    if (args.length) {
-        args[0] = ntUtil.formatDate(new Date(), 'dd-MM HH:mm:ss.zzz') + ' ' + args[0];
-    }
-    this.logger.log.apply(null, args);
-    if (this.uiCon) {
-        const message = util.format.apply(null, args);
-        this.uiCon.emit('activity', {time: Date.now(), message: message});
-    }
+    this.logger.log.apply(this.logger, Array.from(arguments))
+        .then((message) => {
+            if (this.uiCon) {
+                this.uiCon.emit('activity', {time: Date.now(), message: message});
+            }
+        })
+    ;
 }
 
 // Pool
