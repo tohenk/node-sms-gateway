@@ -250,11 +250,18 @@ AppDispatcher.Activity.prototype.check = function() {
 }
 
 AppDispatcher.Activity.prototype.add = function(data, group, cb) {
-    const terminals = this.getTerminal(data.type, data.address, group);
-    if (terminals.length == 0) {
-        console.log('No terminal available for activity %d => %s (%d)', data.type,
+    const term = this.selectTerminal(data.type, data.address, group);
+    if (!term) {
+        console.log('No terminal available for activity %s => %s (%s)', data.type,
             data.address, group ? group : '-');
     } else {
+        term.addQueue(data, cb);
+    }
+}
+
+AppDispatcher.Activity.prototype.selectTerminal = function(type, address, group) {
+    const terminals = this.getTerminal(type, address, group);
+    if (terminals.length) {
         var index = 0;
         if (terminals.length > 1) {
             terminals.sort((a, b) => {
@@ -262,7 +269,7 @@ AppDispatcher.Activity.prototype.add = function(data, group, cb) {
             });
             index = Math.floor(Math.random() * terminals.length);
         }
-        terminals[index].addQueue(data, cb);
+        return terminals[index];
     }
 }
 

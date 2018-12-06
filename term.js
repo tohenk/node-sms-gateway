@@ -33,7 +33,6 @@ const ini           = require('ini');
 const path          = require('path');
 const util          = require('util');
 const EventEmitter  = require('events');
-const ntUtil        = require('./lib/util');
 const ntLogger      = require('./lib/logger');
 const AppStorage    = require('./storage');
 const AppDispatcher = require('./dispatcher');
@@ -286,10 +285,24 @@ AppTerm.handleMessageRetry = function(socket, data) {
                     });
                 } else if (gwlog.status == 0) {
                     AppStorage.GwQueue.findOne({where: condition}).then((gwqueue) => {
-                        gwqueue.update({processed: 0, retry: null}).then(() => {
-                            const term = this.get(gwqueue.imsi);
-                            if (term) term.dispatcher.reload();
-                        });
+                        const updates = {processed: 0, retry: null};
+                        var term = this.get(gwqueue.imsi);
+                        // allow to use other terminal in case destined terminal is not exist
+                        // or not able to send message
+                        if (!term || !term.options.sendMessage) {
+                            term = this.dispatcher.selectTerminal(AppStorage.ACTIVITY_SMS, gwqueue.address, socket.group);
+                            if (term) {
+                                updates.imsi = term.name;
+                                console.log('Relocating message %s using %s', data.hash, term.name);
+                            }
+                        }
+                        // only retry when terminal is available
+                        if (term) {
+                            gwqueue.update(updates).then(() => {
+                                console.log('Resetting message %s status for retry', data.hash);
+                                term.dispatcher.reload();
+                            });
+                        }
                     });
                 }
             });
