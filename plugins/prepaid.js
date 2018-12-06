@@ -31,6 +31,7 @@ module.exports = exports = PluginPrepaid;
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
+const formatNumber = require('format-number')();
 
 const ACTIVITY_CALL = 1;
 const ACTIVITY_RING = 2;
@@ -70,8 +71,8 @@ PluginPrepaid.prototype.writeData = function() {
 
 PluginPrepaid.prototype.parse = function(queue, data) {
     const re = new RegExp(data.response);
-    var match;
-    if (match = re.exec(queue.data)) {
+    const match = re.exec(queue.data);
+    if (match) {
         console.log('Prepaid matches: %s', JSON.stringify(match));
         const balanceIndex = data.matches ? data.matches[0] : 1;
         const activeIndex = data.matches ? data.matches[1] : 2;
@@ -101,6 +102,76 @@ PluginPrepaid.prototype.formatInfo = function(info) {
     }
     if (info.time instanceof Date) {
         info.time = moment(info.time).format('DD MMM YYYY HH:mm');
+    }
+    if (info.balance != undefined) {
+        info.balance = formatNumber(parseFloat(info.balance));
+    }
+    if (info.active != undefined) {
+        info.active = this.fixDate(info.active);
+    }
+}
+
+PluginPrepaid.prototype.fixDate = function(str) {
+    var separator, parts;
+    ['.', '-', '/'].forEach((sep) => {
+        if (str.indexOf(sep) >= 0) {
+            separator = sep;
+            return true;
+        }
+    });
+    if (separator) {
+        parts = str.split(separator);
+    } else {
+        const re = new RegExp('[a-zA-Z]+');
+        const match = re.exec(str);
+        if (match) {
+            parts = str.split(match[0]);
+            parts.splice(1, 0, match[0]);
+        }
+    }
+    if (parts && parts.length == 3) {
+        // assume D-M-Y
+        const d = parseInt(parts[0]);
+        const m = !isNaN(parts[1]) ? parseInt(parts[1]) : this.monthIndex(parts[1]);
+        const y = parseInt(parts[2].length == 2 ? (new Date()).getFullYear().toString().substr(0, 2) + parts[2] : parts[2]);
+        str = moment(new Date(y, m - 1, d)).format('DD MMM YYYY');
+    }
+    return str;
+}
+
+PluginPrepaid.prototype.monthIndex = function(month) {
+    if (month) {
+        switch (month.substr(0, 3).toLowerCase()) {
+            case 'jan':
+                return 1;
+            case 'feb':
+            case 'peb':
+                return 2;
+            case 'mar':
+                return 3;
+            case 'apr':
+                return 4;
+            case 'may':
+            case 'mei':
+                return 5;
+            case 'jun':
+                return 6;
+            case 'jul':
+                return 7;
+            case 'agu':
+                return 8;
+            case 'sep':
+                return 9;
+            case 'oct':
+            case 'okt':
+                return 10;
+            case 'nop':
+            case 'nov':
+                return 11;
+            case 'des':
+            case 'dec':
+                return 12;
+        }
     }
 }
 
