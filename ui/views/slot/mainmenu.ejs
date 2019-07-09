@@ -23,6 +23,9 @@
         readmsg: {
             title: 'Read messages from storage'
         },
+        resendmsg: {
+            title: 'Resend incoming messages'
+        },
         checkreport: {
             title: 'Check delivery report'
         },
@@ -69,84 +72,111 @@ $.tasks = {
             f();
         }
     },
+    createPickMessageTypeDialog: function(id, title, label, handler, icon) {
+        var message =
+            '<form class="ui container form">' +
+                '<div class="field">' +
+                    '<label>' + label + '</label>' +
+                    '<select name="type" class="ui dropdown">' +
+                        '<option value="0">Unread messages</option>' +
+                        '<option value="1">Read messages</option>' +
+                    '</select>' +
+                '</div>' +
+            '</form>';
+        var dlg = $.ntdlg.dialog(id, title, message, icon ? icon : 'envelope icon', {
+            'okay': {
+                type: 'green approve',
+                caption: '<i class="check icon"></i>Ok',
+                handler: function() {
+                    var t = parseInt(dlg.find('select[name="type"]').val());
+                    if (typeof handler == 'function') {
+                        handler(t);
+                    }
+                }
+            },
+            'cancel': {
+                type: 'red deny',
+                caption: '<i class="times icon"></i>Cancel'
+            }
+        });
+        dlg.find('select.dropdown').dropdown();
+        dlg.find('form').on('submit', function(e) {
+            e.preventDefault();
+            dlg.find('div.green.button').click();
+        });
+        return dlg;
+    },
+    createPickTimeDialog: function(id, title, label, handler, icon) {
+        var message =
+            '<form class="ui container form">' +
+                '<div class="field">' +
+                    '<label>' + label + '</label>' +
+                    '<div class="ui calendar">' +
+                        '<div class="ui input left icon">' +
+                        '<i class="calendar icon"></i>' +
+                        '<input name="since" type="text" placeholder="Date/Time">' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</form>';
+        var dlg = $.ntdlg.dialog(id, title, message, icon ? icon : 'envelope icon', {
+            'okay': {
+                type: 'green approve',
+                caption: '<i class="check icon"></i>Ok',
+                handler: function() {
+                    var t = dlg.find('input[name="since"]');
+                    try {
+                        dt = new Date(t.val());
+                    } catch (e) {
+                        t.focus();
+                        return false;
+                    }
+                    if (typeof handler == 'function') {
+                        handler(dt);
+                    }
+                }
+            },
+            'cancel': {
+                type: 'red deny',
+                caption: '<i class="times icon"></i>Cancel'
+            }
+        });
+        dlg.find('.ui.calendar').calendar({type: 'datetime'});
+        dlg.find('form').on('submit', function(e) {
+            e.preventDefault();
+            dlg.find('div.green.button').click();
+        });
+        return dlg;
+    },
     readMessages: function() {
         var self = this;
         if (!self.readmsgdlg) {
-            var message =
-                '<form class="ui container form">' +
-                    '<div class="field">' +
-                        '<label>Select message type to read:</label>' +
-                        '<select name="type" class="ui dropdown">' +
-                            '<option value="0">Unread messages</option>' +
-                            '<option value="1">Read messages</option>' +
-                        '</select>' +
-                    '</div>' +
-                '</form>';
-            self.readmsgdlg = $.ntdlg.dialog('readmsgdlg', 'Read Messages', message, 'envelope icon', {
-                'okay': {
-                    type: 'green approve',
-                    caption: '<i class="check icon"></i>Ok',
-                    handler: function() {
-                        var t = parseInt(self.readmsgdlg.find('select[name="type"]').val());
-                        $.post('/tasks/readmsg', {type: t}).then(function(json) {
-                            self.notifyResult(json);
-                        });
-                    }
-                },
-                'cancel': {
-                    type: 'red deny',
-                    caption: '<i class="times icon"></i>Cancel'
-                }
-            });
-            self.readmsgdlg.find('select.dropdown').dropdown();
-            self.readmsgdlg.find('form').on('submit', function(e) {
-                e.preventDefault();
-                self.readmsgdlg.find('div.green.button').click();
+            self.readmsgdlg = self.createPickMessageTypeDialog('readmsgdlg', 'Read Messages', 'Select message type to read:', function(msg) {
+                $.post('/tasks/readmsg', {type: msg}).then(function(json) {
+                    self.notifyResult(json);
+                });
             });
         }
         $.ntdlg.show(self.readmsgdlg);
     },
+    resendMessages: function() {
+        var self = this;
+        if (!self.resendmsgdlg) {
+            self.resendmsgdlg = self.createPickTimeDialog('resendmsgdlg', 'Resend Incoming Messages', 'Resend incoming messages since:', function(since) {
+                $.post('/tasks/resendmsg', {since: since.valueOf()}).then(function(json) {
+                    self.notifyResult(json);
+                });
+            });
+        }
+        $.ntdlg.show(self.resendmsgdlg);
+    },
     checkReport: function() {
         var self = this;
         if (!self.checkrptdlg) {
-            var message =
-                '<form class="ui container form">' +
-                    '<div class="field">' +
-                        '<label>Check for message report since:</label>' +
-                        '<div class="ui calendar">' +
-                            '<div class="ui input left icon">' +
-                               '<i class="calendar icon"></i>' +
-                               '<input name="since" type="text" placeholder="Date/Time">' +
-                            '</div>' +
-                        '</div>' +
-                    '</div>' +
-                '</form>';
-            self.checkrptdlg = $.ntdlg.dialog('checkrptdlg', 'Check report', message, 'envelope icon', {
-                'okay': {
-                    type: 'green approve',
-                    caption: '<i class="check icon"></i>Ok',
-                    handler: function() {
-                        var t = self.checkrptdlg.find('input[name="since"]');
-                        try {
-                            dt = new Date(t.val());
-                        } catch (e) {
-                            t.focus();
-                            return false;
-                        }
-                        $.post('/tasks/report', {since: dt.valueOf()}).then(function(json) {
-                            self.notifyResult(json);
-                        });
-                    }
-                },
-                'cancel': {
-                    type: 'red deny',
-                    caption: '<i class="times icon"></i>Cancel'
-                }
-            });
-            self.checkrptdlg.find('.ui.calendar').calendar({type: 'datetime'});
-            self.checkrptdlg.find('form').on('submit', function(e) {
-                e.preventDefault();
-                self.checkrptdlg.find('div.green.button').click();
+            self.checkrptdlg = self.createPickTimeDialog('checkrptdlg', 'Check report', 'Check for message report since:', function(since) {
+                $.post('/tasks/report', {since: since.valueOf()}).then(function(json) {
+                    self.notifyResult(json);
+                });
             });
         }
         $.ntdlg.show(self.checkrptdlg);
@@ -160,6 +190,10 @@ $.tasks = {
         $('.menu-readmsg').on('click', function(e) {
             e.preventDefault();
             self.readMessages();
+        });
+        $('.menu-resendmsg').on('click', function(e) {
+            e.preventDefault();
+            self.resendMessages();
         });
         $('.menu-checkreport').on('click', function(e) {
             e.preventDefault();

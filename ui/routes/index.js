@@ -360,6 +360,14 @@ router.post('/tasks/:name', function(req, res, next) {
         result.success = term.pools.length ? true : false;
       }
       break;
+    case 'resendmsg':
+      if (req.body.since) {
+        term.pools.forEach((pool) => {
+          if (pool.con) pool.con.emit('resend-message', req.body.since);
+        });
+        result.success = term.pools.length ? true : false;
+      }
+      break;
     case 'report':
       if (req.body.since) {
         term.pools.forEach((pool) => {
