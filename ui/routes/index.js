@@ -1,8 +1,9 @@
-const express = require('express');
-const router  = express.Router();
-const fs      = require('fs');
-const path    = require('path');
-const moment  = require('moment');
+const express   = require('express');
+const router    = express.Router();
+const fs        = require('fs');
+const path      = require('path');
+const moment    = require('moment');
+const Sequelize = require('sequelize');
 
 function getQueue(req, res, next) {
   const result = {};
@@ -81,7 +82,7 @@ function readMessage(req, res, next) {
   stor.GwQueue.findAll({
     where: {
       address: req.params.number,
-      type: {[stor.db.Op.in]: [stor.ACTIVITY_SMS, stor.ACTIVITY_INBOX]}
+      type: {[Sequelize.Op.in]: [stor.ACTIVITY_SMS, stor.ACTIVITY_INBOX]}
     },
     order: [['time', 'ASC']]
   }).then((results) => {
