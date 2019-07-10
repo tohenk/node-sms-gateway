@@ -159,6 +159,7 @@ PluginPrepaid.prototype.monthIndex = function(month) {
             case 'jul':
                 return 7;
             case 'agu':
+            case 'aug':
                 return 8;
             case 'sep':
                 return 9;
