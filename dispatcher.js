@@ -275,6 +275,7 @@ AppDispatcher.Activity.prototype.selectTerminal = function(type, address, group)
 
 AppDispatcher.Activity.prototype.getTerminal = function(type, address, group) {
     const result = [];
+    const priorities = [];
     for (var i = 0; i < this.appterm.terminals.length; i++) {
         var term = this.appterm.terminals[i];
         if (!term.connected) continue;
@@ -285,8 +286,13 @@ AppDispatcher.Activity.prototype.getTerminal = function(type, address, group) {
             var op = this.appterm.getOperator(address);
             if (!op) continue;
             if (term.options.operators.indexOf(op) < 0) continue;
+            // give an assigned operator as priority
+            priorities.push(term);
         }
         result.push(term);
+    }
+    if (result.length > 1 && priorities.length) {
+        Array.prototype.push.apply(result, priorities);
     }
     return result;
 }
