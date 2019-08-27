@@ -203,6 +203,9 @@ AppTerm.setSocketIo = function(io) {
         socket.on('disconnect', () => {
             console.log('Gateway client disconnected: %s', socket.id);
             socket.leave(this.ClientRoom);
+            if (socket.group) {
+                socket.leave(socket.group);
+            }
             const idx = this.gwclients.indexOf(socket);
             if (idx >= 0) {
                 this.gwclients.splice(idx, 1);
@@ -226,7 +229,11 @@ AppTerm.setSocketIo = function(io) {
         socket.on('group', (data) => {
             if (this.gwclients.indexOf(socket) < 0) return;
             console.log('Group changed for %s => %s', socket.id, data);
+            if (socket.group) {
+                socket.leave(socket.group);
+            }
             socket.group = data;
+            socket.join(socket.group);
         });
         socket.on('message', (data) => {
             if (this.gwclients.indexOf(socket) < 0) return;
@@ -362,7 +369,9 @@ AppTerm.Pool.prototype.init = function() {
         this.parent.log('<-- REPORT: %s', util.inspect(data));
         AppStorage.updateReport(data.imsi, data);
         if (this.parent.gwCon) {
-            this.parent.gwCon.to(this.parent.ClientRoom).emit('status-report', data);
+            const term = this.parent.get(data.imsi);
+            const room = term && term.options.group ? term.options.group : this.parent.ClientRoom;
+            this.parent.gwCon.to(room).emit('status-report', data);
         }
     });
     this.con.on('message', (data) => {
