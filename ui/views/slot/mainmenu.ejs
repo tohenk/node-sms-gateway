@@ -39,8 +39,8 @@
     });
 } %>
 <%- menu(menus, {mainmenu: true, indentation: 2}) %>
-<% script.create('jQuery')
-  .useDependencies(['jQuery/Util', 'jQuery/Notification', 'SemanticUI/Calendar', 'SemanticUI/Dialog/Message'])
+<% script.create('JQuery')
+  .useDependencies(['JQuery/Util', 'JQuery/Notification', 'SemanticUI/Calendar', 'SemanticUI/Dialog/Message'])
   .addMiddle(`
 $.tasks = {
     notifyResult: function(result) {
