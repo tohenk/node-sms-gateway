@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2018 Toha <tohenk@yahoo.com>
+ * Copyright (c) 2018-2020 Toha <tohenk@yahoo.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -53,8 +53,8 @@ const database = {
     password: null,
     database: 'smsgw'
 }
-var config = {};
-var configFile;
+let config = {};
+let configFile;
 // read configuration from command line values
 if (Cmd.get('config') && fs.existsSync(Cmd.get('config'))) {
     configFile = Cmd.get('config');
