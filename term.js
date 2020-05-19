@@ -427,7 +427,7 @@ class AppTermPool {
             this.terminals.push(term);
         });
         let timeout;
-        (ready = () => {
+        const f = () => {
             let readyCnt = 0;
             this.terminals.forEach((term) => {
                 if (term.connected) readyCnt++;
@@ -436,9 +436,10 @@ class AppTermPool {
                 if (timeout != undefined) clearTimeout(timeout);
                 this.checkPending();
             } else {
-                timeout = setTimeout(ready, 500);
+                timeout = setTimeout(f, 500);
             }
-        })();
+        }
+        f();
         this.parent.changed();
     }
 
