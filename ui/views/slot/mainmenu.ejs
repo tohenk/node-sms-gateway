@@ -40,7 +40,7 @@
 } %>
 <%- menu(menus, {mainmenu: true, indentation: 2}) %>
 <% script.create('JQuery')
-  .useDependencies(['JQuery/Util', 'JQuery/Notification', 'SemanticUI/Calendar', 'SemanticUI/Dialog/Message'])
+  .useDependencies(['JQuery/Util', 'JQuery/Notification', 'SemanticUI/Dialog/Message'])
   .addMiddle(`
 $.tasks = {
     notifyResult: function(result) {
