@@ -46,11 +46,10 @@ class AppStorage {
         this.GwQueue = this.import('GwQueue');
         this.GwLog = this.import('GwLog');
         return new Promise((resolve, reject) => {
-            this.db.authenticate().then(() => {
-                resolve();
-            }).catch((err) => {
-                reject(err);
-            });
+            this.db.authenticate()
+                .then(() => resolve())
+                .catch((err) => reject(err))
+            ;
         });
     }
 
@@ -64,68 +63,82 @@ class AppStorage {
                 done(result);
             }
         }
-        this.GwQueue.count({where: {imsi: origin, hash: queue.hash}}).then((count) => {
-            if (count == 0) {
-                queue.imsi = origin;
-                queue.processed = 0;
-                queue.status = 0;
-                if (!queue.priority) queue.priority = this.PRIORITY_NORMAL;
-                if (!queue.time) queue.time = new Date();
-                this.GwQueue.create(queue).then((result) => {
-                    cb(result);
-                }).catch((err) => {
+        this.GwQueue.count({where: {imsi: origin, hash: queue.hash}})
+            .then((count) => {
+                if (count == 0) {
+                    queue.imsi = origin;
+                    queue.processed = 0;
+                    queue.status = 0;
+                    if (!queue.priority) queue.priority = this.PRIORITY_NORMAL;
+                    if (!queue.time) queue.time = new Date();
+                    this.GwQueue.create(queue)
+                        .then((result) => cb(result))
+                        .catch((err) => cb())
+                    ;
+                } else {
                     cb();
-                });
-            } else {
+                }
+            })
+            .catch((err) => {
+                console.log(err);
                 cb();
-            }
-        }).catch((err) => {
-            console.log(err);
-            cb();
-        });
+            })
+        ;
     }
 
     saveLog(origin, log, done) {
-        this.GwLog.count({where: {imsi: origin, hash: log.hash, type: log.type}}).then((count) => {
-            if (count == 0) {
-                this.GwLog.create({
-                    imsi: origin,
-                    hash: log.hash,
-                    type: log.type,
-                    address: log.address,
-                    data: log.data,
-                    status: log.status,
-                    time: log.time
-                }).then((result) => {
-                    if (typeof done == 'function') {
-                        done(result);
-                    }
-                });
-            }
-        }).catch((err) => {
-            console.log(err);
-        });
+        this.GwLog.count({where: {imsi: origin, hash: log.hash, type: log.type}})
+            .then((count) => {
+                if (count == 0) {
+                    this.GwLog.create({
+                        imsi: origin,
+                        hash: log.hash,
+                        type: log.type,
+                        address: log.address,
+                        data: log.data,
+                        status: log.status,
+                        time: log.time
+                    })
+                        .then((result) => {
+                            if (typeof done == 'function') {
+                                done(result);
+                            }
+                        })
+                    ;
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+            })
+        ;
     }
 
     updateReport(origin, report, done) {
         const condition = {imsi: origin, hash: report.hash, type: this.ACTIVITY_SMS};
-        this.GwLog.count({where: condition}).then((count) => {
-            if (count == 1) {
-                this.GwLog.findOne({where: condition}).then((GwLog) => {
-                    GwLog.update({
-                        code: report.code,
-                        sent: report.sent,
-                        received: report.received
-                    }).then((GwLog) => {
-                        if (typeof done == 'function') {
-                            done(GwLog);
-                        }
-                    });
-                });
-            }
-        }).catch((err) => {
-            console.log(err);
-        });
+        this.GwLog.count({where: condition})
+            .then((count) => {
+                if (count == 1) {
+                    this.GwLog.findOne({where: condition})
+                        .then((GwLog) => {
+                            GwLog.update({
+                                code: report.code,
+                                sent: report.sent,
+                                received: report.received
+                            })
+                                .then((GwLog) => {
+                                    if (typeof done == 'function') {
+                                        done(GwLog);
+                                    }
+                                })
+                            ;
+                        })
+                    ;
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+            })
+        ;
     }
 
     countRecents() {

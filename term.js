@@ -32,6 +32,7 @@ const path          = require('path');
 const util          = require('util');
 const EventEmitter  = require('events');
 const ntLogger      = require('./lib/logger');
+const ntWork        = require('./lib/work');
 const AppStorage    = require('./storage');
 const { AppTerminalDispatcher, AppActivityDispatcher } = require('./dispatcher');
 
@@ -51,37 +52,26 @@ class AppTerm {
         this.gwclients = [];
         this.plugins = [];
         this.dispatcher = new AppActivityDispatcher(this);
-        return new Promise((resolve, reject) => {
-            this.initializeLogger();
-            AppStorage.init(config.database).then(() => {
-                this.loadPlugins();
-                this.loadOperator();
-                resolve();
-            }).catch((err) => {
-                reject(err);
-            });
-        });
-    }
-    
-    get(imsi) {
-        let terminal = null;
-        this.terminals.forEach((term) => {
-            if (term.name == imsi) {
-                terminal = term;
-                return true;
-            }
-        });
-        return terminal;
+        return ntWork.works([
+            () => this.initializeLogger(),
+            () => AppStorage.init(config.database),
+            () => this.loadPlugins(),
+            () => this.loadOperator,
+        ]);
     }
 
     initializeLogger() {
-        this.logdir = this.config.logdir || path.join(__dirname, 'logs');
-        this.logfile = path.join(this.logdir, 'activity.log');
-        this.logger = new ntLogger(this.logfile);
+        return new Promise((resolve, reject) => {
+            this.logdir = this.config.logdir || path.join(__dirname, 'logs');
+            this.logfile = path.join(this.logdir, 'activity.log');
+            this.logger = new ntLogger(this.logfile);
+            resolve();
+        });
     }
 
     loadPlugins() {
-        if (this.config.plugins) {
+        if (!this.config.plugins) return Promise.resolve();
+        return new Promise((resolve, reject) => {
             let plugins = Array.isArray(this.config.plugins) ? this.config.plugins : this.config.plugins.split(',');
             for (let i = 0; i < plugins.length; i++) {
                 let plugin = plugins[i].trim();
@@ -111,15 +101,28 @@ class AppTerm {
                     }
                 }
             }
-        }
-        return this;
+            resolve();
+        });
     }
 
     loadOperator() {
-        if (this.operatorFilename && fs.existsSync(this.operatorFilename)) {
-            this.operators = ini.parse(fs.readFileSync(this.operatorFilename, 'utf-8'));
-        }
-        return this;
+        return new Promise((resolve, reject) => {
+            if (this.operatorFilename && fs.existsSync(this.operatorFilename)) {
+                this.operators = ini.parse(fs.readFileSync(this.operatorFilename, 'utf-8'));
+            }
+            resolve();
+        });
+    }
+
+    get(imsi) {
+        let terminal = null;
+        this.terminals.forEach((term) => {
+            if (term.name == imsi) {
+                terminal = term;
+                return true;
+            }
+        });
+        return terminal;
     }
 
     getOperator(number) {
@@ -275,46 +278,54 @@ class AppTerm {
             hash: data.hash,
             type: AppStorage.ACTIVITY_SMS
         }
-        AppStorage.GwQueue.count({where: condition}).then((count) => {
-            if (0 == count) {
-                this.handleMessage(socket, data);
-            } else {
-                AppStorage.GwLog.findOne({where: condition}).then((gwlog) => {
-                    // message report already confirmed
-                    if (gwlog.code != null) {
-                        socket.emit('status-report', {
-                            hash: gwlog.hash,
-                            address: gwlog.address,
-                            code: gwlog.code,
-                            sent: gwlog.sent,
-                            received: gwlog.received,
-                            time: gwlog.time
-                        });
-                    } else if (gwlog.status == 0) {
-                        AppStorage.GwQueue.findOne({where: condition}).then((gwqueue) => {
-                            const updates = {processed: 0, retry: null};
-                            let term = this.get(gwqueue.imsi);
-                            // allow to use other terminal in case destined terminal is not exist
-                            // or not able to send message
-                            if (!term || !term.options.sendMessage) {
-                                term = this.dispatcher.selectTerminal(AppStorage.ACTIVITY_SMS, gwqueue.address, socket.group);
-                                if (term) {
-                                    updates.imsi = term.name;
-                                    console.log('Relocating message %s using %s', data.hash, term.name);
-                                }
-                            }
-                            // only retry when terminal is available
-                            if (term) {
-                                gwqueue.update(updates).then(() => {
-                                    console.log('Resetting message %s status for retry', data.hash);
-                                    term.dispatcher.reload();
+        AppStorage.GwQueue.count({where: condition})
+            .then((count) => {
+                if (0 == count) {
+                    this.handleMessage(socket, data);
+                } else {
+                    AppStorage.GwLog.findOne({where: condition})
+                        .then((gwlog) => {
+                            // message report already confirmed
+                            if (gwlog.code != null) {
+                                socket.emit('status-report', {
+                                    hash: gwlog.hash,
+                                    address: gwlog.address,
+                                    code: gwlog.code,
+                                    sent: gwlog.sent,
+                                    received: gwlog.received,
+                                    time: gwlog.time
                                 });
+                            } else if (gwlog.status == 0) {
+                                AppStorage.GwQueue.findOne({where: condition})
+                                    .then((gwqueue) => {
+                                        const updates = {processed: 0, retry: null};
+                                        let term = this.get(gwqueue.imsi);
+                                        // allow to use other terminal in case destined terminal is not exist
+                                        // or not able to send message
+                                        if (!term || !term.options.sendMessage) {
+                                            term = this.dispatcher.selectTerminal(AppStorage.ACTIVITY_SMS, gwqueue.address, socket.group);
+                                            if (term) {
+                                                updates.imsi = term.name;
+                                                console.log('Relocating message %s using %s', data.hash, term.name);
+                                            }
+                                        }
+                                        // only retry when terminal is available
+                                        if (term) {
+                                            gwqueue.update(updates)
+                                                .then(() => {
+                                                    console.log('Resetting message %s status for retry', data.hash);
+                                                    term.dispatcher.reload();
+                                                })
+                                            ;
+                                        }
+                                    })
+                                ;
                             }
-                        });
-                    }
-                });
-            }
-        });
+                        })
+                    ;
+                }
+            })
+        ;
     }
 
     log() {
@@ -479,10 +490,12 @@ class AppTerminal extends EventEmitter {
         this.con.on('connect', () => {
             this.connected = true;
             this.syncOptions(false);
-            this.getInfo().then(() => {
-                this.info = this.reply;
-                this.dispatcher.reload();
-            });
+            this.getInfo()
+                .then(() => {
+                    this.info = this.reply;
+                    this.dispatcher.reload();
+                })
+            ;
         });
         this.con.on('disconnect', () => {
             this.connected = false;
@@ -608,11 +621,10 @@ class AppTerminal extends EventEmitter {
             if (!data.imsi) data.imsi = this.name;
             if (!data.time) data.time = new Date();
             if (!data.hash) {
-                this.query('hash', data).then(() => {
-                    resolve(this.reply);
-                }).catch(() => {
-                    resolve(data);
-                });
+                this.query('hash', data)
+                    .then(() => resolve(this.reply))
+                    .catch(() => resolve(data))
+                ;
             } else {
                 resolve(data);
             }
@@ -620,16 +632,18 @@ class AppTerminal extends EventEmitter {
     }
 
     addQueue(data, cb) {
-        this.fixData(data).then((result) => {
-            AppStorage.saveQueue(this.name, result, (queue) => {
-                if (queue) {
-                    this.dispatcher.reload();
-                }
-                if (typeof cb == 'function') {
-                    cb(queue);
-                }
-            });
-        });
+        this.fixData(data)
+            .then((result) => {
+                AppStorage.saveQueue(this.name, result, (queue) => {
+                    if (queue) {
+                        this.dispatcher.reload();
+                    }
+                    if (typeof cb == 'function') {
+                        cb(queue);
+                    }
+                });
+            })
+        ;
     }
 
     addCallQueue(phoneNumber, cb) {

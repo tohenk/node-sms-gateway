@@ -144,9 +144,11 @@ class AppTerminalDispatcher extends AppDispatcher {
                 ['processed', 'ASC'],
                 ['time', 'ASC']
             ]
-        }).then((results) => {
-            done(results);
-        });
+        })
+            .then((results) => {
+                done(results);
+            })
+        ;
     }
 
     check() {
@@ -162,22 +164,27 @@ class AppTerminalDispatcher extends AppDispatcher {
         if (!success && GwQueue.type == AppStorage.ACTIVITY_SMS) {
             updates.retry = GwQueue.retry ? GwQueue.retry + 1 : 1;
         }
-        GwQueue.update(updates).then((result) => {
-            if (GwQueue.type != AppStorage.ACTIVITY_USSD) {
-                AppStorage.saveLog(GwQueue.imsi, result);
-            }
-            this.endQueue(GwQueue.id);
-        });
+        GwQueue.update(updates)
+            .then((result) => {
+                if (GwQueue.type != AppStorage.ACTIVITY_USSD) {
+                    AppStorage.saveLog(GwQueue.imsi, result);
+                }
+                this.endQueue(GwQueue.id);
+            })
+        ;
     }
 
     process(GwQueue) {
         const f = (action) => {
             if (action) {
-                action.then(() => {
-                    this.update(GwQueue, true);
-                }).catch(() => {
-                    this.update(GwQueue, false);
-                });
+                action
+                    .then(() => {
+                        this.update(GwQueue, true);
+                    })
+                    .catch(() => {
+                        this.update(GwQueue, false);
+                    })
+                ;
             }
         }
         switch (GwQueue.type) {
@@ -187,20 +194,22 @@ class AppTerminalDispatcher extends AppDispatcher {
             case AppStorage.ACTIVITY_SMS:
                 // if it is a message retry then ensure the status is really failed
                 if (GwQueue.retry != null) {
-                    this.term.query('status', GwQueue.hash).then((status) => {
-                        if (status.success && status.hash == GwQueue.hash) {
-                            if (status.status) {
-                                // it was success, update status
-                                GwQueue.update({status: 1});
+                    this.term.query('status', GwQueue.hash)
+                        .then((status) => {
+                            if (status.success && status.hash == GwQueue.hash) {
+                                if (status.status) {
+                                    // it was success, update status
+                                    GwQueue.update({status: 1});
+                                } else {
+                                    // retry message
+                                    f(this.term.sendMessage(GwQueue));
+                                }
                             } else {
-                                // retry message
+                                // message not processed yet, okay to send
                                 f(this.term.sendMessage(GwQueue));
                             }
-                        } else {
-                            // message not processed yet, okay to send
-                            f(this.term.sendMessage(GwQueue));
-                        }
-                    });
+                        })
+                    ;
                 } else {
                     f(this.term.sendMessage(GwQueue));
                 }
@@ -234,9 +243,11 @@ class AppActivityDispatcher extends AppDispatcher {
                 ['priority', 'ASC'],
                 ['time', 'ASC']
             ]
-        }).then((results) => {
-            done(results);
-        });
+        })
+            .then((results) => {
+                done(results);
+            })
+        ;
     }
 
     check() {
@@ -371,12 +382,13 @@ class AppActivityDispatcher extends AppDispatcher {
                     }
                 });
             }
-            GwQueue.update({processed: 1, status: processed ? 1 : 0}).then(() => {
-                done();
-            }).catch((err) => {
-                console.log(err);
-                done();
-            });
+            GwQueue.update({processed: 1, status: processed ? 1 : 0})
+                .then(() => done())
+                .catch((err) => {
+                    console.log(err);
+                    done();
+                })
+            ;
         } else {
             done();
         }

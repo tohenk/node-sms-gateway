@@ -105,15 +105,18 @@ if (!config.pools) {
     }]
 }
 
-AppTerm.init(config).then(() => {
-    run();
-}).catch((err) => {
-    if (err instanceof Error) {
-        console.log('%s: %s', err.name, err.message);
-    } else {
-        console.log(err);
-    }
-});
+AppTerm.init(config)
+    .then(() => {
+        run();
+    })
+    .catch((err) => {
+        if (err instanceof Error) {
+            console.log('%s: %s', err.name, err.message);
+        } else {
+            console.log(err);
+        }
+    })
+;
 
 function run() {
     const port = Cmd.get('port') | 8080;
