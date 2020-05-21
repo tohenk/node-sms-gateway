@@ -56,7 +56,7 @@ class AppTerm {
             () => this.initializeLogger(),
             () => AppStorage.init(config.database),
             () => this.loadPlugins(),
-            () => this.loadOperator,
+            () => this.loadOperator(),
         ]);
     }
 
