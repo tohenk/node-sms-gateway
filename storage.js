@@ -43,18 +43,14 @@ class AppStorage {
 
     init(options) {
         this.db = new Sequelize(options);
-        this.GwQueue = this.import('GwQueue');
-        this.GwLog = this.import('GwLog');
+        this.GwQueue = require('./model/GwQueue')(this.db);
+        this.GwLog = require('./model/GwLog')(this.db);
         return new Promise((resolve, reject) => {
             this.db.authenticate()
                 .then(() => resolve())
                 .catch((err) => reject(err))
             ;
         });
-    }
-
-    import(model) {
-        return this.db.import(path.join(__dirname, 'model', model));
     }
 
     saveQueue(origin, queue, done) {
