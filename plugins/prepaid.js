@@ -45,15 +45,37 @@ class PrepaidPlugin {
         this.description = 'Prepaid allows checking for balance and active period for prepaid card';
         this.icon = 'dollar sign';
         this.appterm = appterm;
+        this.prepaid = {};
         this.data = {};
     }
 
     initialize() {
-        this.prepaid = JSON.parse(fs.readFileSync(path.join(__dirname, 'prepaid.json')));
         this.workdir = path.join(__dirname, 'data');
+        this.prepaidfile = path.join(__dirname, 'prepaid.json');
         this.datafile = path.join(this.workdir, 'prepaid.info');
         if (!fs.existsSync(this.workdir)) fs.mkdirSync(this.workdir);
+        this.readPrepaidData();
         this.readData();
+        this.watchPrepaidData();
+    }
+
+    watchPrepaidData() {
+        fs.watchFile(this.prepaidfile, (curr, prev) => {
+            if (curr.mtime != prev.mtime) {
+                console.log('Prepaid data is changed, reloading');
+                this.readPrepaidData();
+            }
+        });
+    }
+
+    readPrepaidData() {
+        try {
+            const data = JSON.parse(fs.readFileSync(this.prepaidfile));
+            this.prepaid = data;
+        }
+        catch (err) {
+            console.log(err);
+        }
     }
 
     readData() {
