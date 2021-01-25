@@ -138,7 +138,13 @@ class App {
         const port = Cmd.get('port') || 8080;
         const app = require('./ui/app');
         const http = require('http').Server(app);
-        const io = require('socket.io')(http);
+        const opts = {};
+        if (this.config.cors) {
+            opts.cors = this.config.cors;
+        } else {
+            opts.cors = {origin: '*'};
+        }
+        const io = require('socket.io')(http, opts);
         const termio = require('socket.io-client');
         this.term.setSocketIo(io);
         this.term.setTermIo(termio);
