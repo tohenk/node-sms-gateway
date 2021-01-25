@@ -44,7 +44,6 @@ const crypto        = require('crypto');
 const fs            = require('fs');
 const ntUtil        = require('./lib/util');
 const ntLogger      = require('./lib/logger');
-const AppTerm       = require('./term');
 
 const database = {
     dialect: 'mysql',
@@ -53,95 +52,119 @@ const database = {
     password: null,
     database: 'smsgw'
 }
-let config = {};
-let configFile;
-// read configuration from command line values
-if (Cmd.get('config') && fs.existsSync(Cmd.get('config'))) {
-    configFile = Cmd.get('config');
-} else if (fs.existsSync(path.join(__dirname, 'config.json'))) {
-    configFile = path.join(__dirname, 'config.json');
-}
-if (configFile) {
-    console.log('Reading configuration %s', configFile);
-    config = JSON.parse(fs.readFileSync(configFile));
-}
-// check for default configuration
-if (!config.database)
-    config.database = database;
-if (!config.countryCode)
-    config.countryCode = '62';
-if (!config.operatorFilename)
-    config.operatorFilename = path.join(__dirname, 'Operator.ini');
-if (!config.configdir)
-    config.configdir = path.join(__dirname, 'config');
-if (!config.logdir)
-    config.logdir = path.join(__dirname, 'logs');
-if (!config.secret) {
-    config.secret = hashgen();
-    console.log('Using secret: %s', config.secret);
-}
-if (!config.security) config.security = {};
-if (!config.security.username) {
-    config.security.username = 'admin';
-    console.log('Web interface username using default: %s', config.security.username);
-}
-if (!config.security.password) {
-    config.security.password = hashgen();
-    console.log('Web interface password generated: %s', config.security.password);
-}
-if (!config.database.logging) {
-    const dblogger = new ntLogger(path.join(config.logdir, 'db.log'));
-    config.database.logging = function() {
-        dblogger.log.apply(dblogger, Array.from(arguments));
-    }
-}
-config.plugins = Cmd.get('plugins');
-// check pools
-if (!config.pools) {
-    config.pools = [{
-        name: 'localhost',
-        url: Cmd.get('url') || 'http://localhost:8000',
-        key: Cmd.get('key') || ''
-    }]
-}
 
-AppTerm.init(config)
-    .then(() => {
-        run();
-    })
-    .catch((err) => {
-        if (err instanceof Error) {
-            console.log('%s: %s', err.name, err.message);
-        } else {
-            console.log(err);
+class App {
+
+    config = {}
+    term = null
+
+    initialize() {
+        let filename;
+        // read configuration from command line values
+        if (Cmd.get('config') && fs.existsSync(Cmd.get('config'))) {
+            filename = Cmd.get('config');
+        } else if (fs.existsSync(path.join(__dirname, 'config.json'))) {
+            filename = path.join(__dirname, 'config.json');
         }
-    })
-;
-
-function run() {
-    const port = Cmd.get('port') | 8080;
-    const app = require('./ui/app');
-    const http = require('http').Server(app);
-    const io = require('socket.io')(http);
-    const termio = require('socket.io-client');
-    AppTerm.setSocketIo(io);
-    AppTerm.setTermIo(termio);
-    app.title = 'SMS Gateway';
-    app.term = app.locals.term = AppTerm;
-    app.authenticate = (username, password) => {
-        return username == config.security.username && password == config.security.password ?
-            true : false;
+        if (filename) {
+            console.log('Reading configuration %s', filename);
+            this.config = JSON.parse(fs.readFileSync(filename));
+        }
+        // check for default configuration
+        if (!this.config.database)
+            this.config.database = database;
+        if (!this.config.countryCode)
+            this.config.countryCode = '62';
+        if (!this.config.operatorFilename)
+            this.config.operatorFilename = path.join(__dirname, 'Operator.ini');
+        if (!this.config.configdir)
+            this.config.configdir = path.join(__dirname, 'config');
+        if (!this.config.logdir)
+            this.config.logdir = path.join(__dirname, 'logs');
+        if (!this.config.secret) {
+            this.config.secret = this.hashgen();
+            console.log('Using secret: %s', this.config.secret);
+        }
+        if (!this.config.security) this.config.security = {};
+        if (!this.config.security.username) {
+            this.config.security.username = 'admin';
+            console.log('Web interface username using default: %s', this.config.security.username);
+        }
+        if (!this.config.security.password) {
+            this.config.security.password = this.hashgen();
+            console.log('Web interface password generated: %s', this.config.security.password);
+        }
+        if (!this.config.database.logging) {
+            const dblogger = new ntLogger(path.join(this.config.logdir, 'db.log'));
+            this.config.database.logging = (...args) => {
+                dblogger.log.apply(dblogger, args);
+            }
+        }
+        this.config.plugins = Cmd.get('plugins');
+        // check pools
+        if (!this.config.pools) {
+            this.config.pools = [{
+                name: 'localhost',
+                url: Cmd.get('url') || 'http://localhost:8000',
+                key: Cmd.get('key') || ''
+            }];
+        }
+        return true;
     }
-    http.listen(port, () => {
-        console.log('Application ready on port %s...', port);
-    });
+
+    hashgen() {
+        const shasum = crypto.createHash('sha1');
+        shasum.update(ntUtil.formatDate(new Date(), 'yyyyMMddHHmmsszzz') + (Math.random() * 1000000).toString());
+        return shasum.digest('hex').substr(0, 8);
+    }
+
+    createTerm(callback) {
+        this.term = require('./term');
+        this.term.init(this.config)
+            .then(() => {
+                callback();
+            })
+            .catch((err) => {
+                if (err instanceof Error) {
+                    console.log('%s: %s', err.name, err.message);
+                } else {
+                    console.log(err);
+                }
+            })
+        ;
+    }
+
+    startTerm() {
+        const port = Cmd.get('port') || 8080;
+        const app = require('./ui/app');
+        const http = require('http').Server(app);
+        const io = require('socket.io')(http);
+        const termio = require('socket.io-client');
+        this.term.setSocketIo(io);
+        this.term.setTermIo(termio);
+        app.title = 'SMS Gateway';
+        app.term = app.locals.term = this.term;
+        app.authenticate = (username, password) => {
+            return username == this.config.security.username && password == this.config.security.password ?
+                true : false;
+        }
+        http.listen(port, () => {
+            console.log('Application ready on port %s...', port);
+        });
+    }
+
+    run() {
+        if (this.initialize()) {
+            this.createTerm(() => {
+                this.startTerm();
+            });
+        }
+    }
 }
 
-function hashgen() {
-    const shasum = crypto.createHash('sha1');
-    shasum.update(ntUtil.formatDate(new Date(), 'yyyyMMddHHmmsszzz') + (Math.random() * 1000000).toString());
-    return shasum.digest('hex').substr(0, 8);
-}
+(function run() {
+    new App().run();
+})();
 
 function usage() {
     console.log('Usage:');
