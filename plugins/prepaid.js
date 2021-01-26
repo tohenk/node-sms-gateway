@@ -91,24 +91,27 @@ class PrepaidPlugin {
     }
 
     parse(queue, data) {
-        const re = new RegExp(data.response);
-        const match = re.exec(queue.data);
-        if (match) {
-            console.log('Prepaid matches: %s', JSON.stringify(match));
-            const balanceIndex = data.matches ? data.matches[0] : 1;
-            const activeIndex = data.matches ? data.matches[1] : 2;
-            const info = {
-                response: queue.data,
-                balance: match[balanceIndex],
-                active: match[activeIndex],
-                time: new Date()
+        const responses = typeof data.response == 'string' ? [data.response] : data.response;
+        responses.forEach((pattern) => {
+            const re = new RegExp(pattern);
+            const match = re.exec(queue.data);
+            if (match) {
+                console.log('Prepaid matches: %s', JSON.stringify(match));
+                if (match.groups.BALANCE && match.groups.ACTIVE) {
+                    const info = {
+                        response: queue.data,
+                        balance: match.groups.BALANCE,
+                        active: match.groups.ACTIVE,
+                        time: new Date()
+                    }
+                    if (!this.data[queue.imsi]) this.data[queue.imsi] = {};
+                    Object.assign(this.data[queue.imsi], info);
+                    this.writeData();
+                    this.formatInfo(info);
+                    this.appterm.uiCon.emit('prepaid', queue.imsi, info);
+                }
             }
-            if (!this.data[queue.imsi]) this.data[queue.imsi] = {};
-            Object.assign(this.data[queue.imsi], info);
-            this.writeData();
-            this.formatInfo(info);
-            this.appterm.uiCon.emit('prepaid', queue.imsi, info);
-        }
+        });
     }
 
     formatInfo(info) {
