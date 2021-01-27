@@ -65,6 +65,8 @@ class App {
         // read configuration from command line values
         if (Cmd.get('config') && fs.existsSync(Cmd.get('config'))) {
             filename = Cmd.get('config');
+        } else if (fs.existsSync(path.join(process.cwd(), 'config.json'))) {
+            filename = path.join(process.cwd(), 'config.json');
         } else if (fs.existsSync(path.join(__dirname, 'config.json'))) {
             filename = path.join(__dirname, 'config.json');
         }
@@ -72,6 +74,7 @@ class App {
             console.log('Reading configuration %s', filename);
             this.config = JSON.parse(fs.readFileSync(filename));
         }
+        let workdir = this.config.workdir ? this.config.workdir : __dirname;
         // check for default configuration
         if (!this.config.database)
             this.config.database = database;
@@ -80,9 +83,11 @@ class App {
         if (!this.config.operatorFilename)
             this.config.operatorFilename = path.join(__dirname, 'Operator.ini');
         if (!this.config.configdir)
-            this.config.configdir = path.join(__dirname, 'config');
+            this.config.configdir = path.join(workdir, 'config');
+        if (!this.config.sessiondir)
+            this.config.sessiondir = path.join(workdir, 'sessions');
         if (!this.config.logdir)
-            this.config.logdir = path.join(__dirname, 'logs');
+            this.config.logdir = path.join(workdir, 'logs');
         if (!this.config.secret) {
             this.config.secret = this.hashgen();
             console.log('Using secret: %s', this.config.secret);
@@ -138,7 +143,7 @@ class App {
 
     startTerm() {
         const port = Cmd.get('port') || 8080;
-        const app = require('./ui/app');
+        const app = require('./ui/app')(this.config);
         const http = require('http').Server(app);
         const opts = {};
         if (this.config.cors) {
