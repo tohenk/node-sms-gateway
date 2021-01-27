@@ -50,7 +50,7 @@ class PrepaidPlugin {
     }
 
     initialize() {
-        this.workdir = path.join(__dirname, 'data');
+        this.workdir = this.appterm.config.datadir ? path.join(this.appterm.config.datadir, 'prepaid') : path.join(__dirname, 'data');
         this.prepaidfile = path.join(__dirname, 'prepaid.json');
         this.datafile = path.join(this.workdir, 'prepaid.info');
         if (!fs.existsSync(this.workdir)) fs.mkdirSync(this.workdir);

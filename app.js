@@ -84,6 +84,8 @@ class App {
             this.config.operatorFilename = path.join(__dirname, 'Operator.ini');
         if (!this.config.configdir)
             this.config.configdir = path.join(workdir, 'config');
+        if (!this.config.datadir)
+            this.config.datadir = path.join(workdir, 'data');
         if (!this.config.sessiondir)
             this.config.sessiondir = path.join(workdir, 'sessions');
         if (!this.config.logdir)

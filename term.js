@@ -76,7 +76,11 @@ class AppTerm {
             for (let i = 0; i < plugins.length; i++) {
                 let plugin = plugins[i].trim();
                 let pluginSrc;
-                [plugin, path.join(__dirname, 'plugins', plugin)].forEach((file) => {
+                [
+                    plugin,
+                    path.join(__dirname, 'plugins', plugin),
+                    path.join(__dirname, 'plugins', plugin, 'index')
+                ].forEach((file) => {
                     if (fs.existsSync(file + '.js')) {
                         pluginSrc = file;
                         return true;
