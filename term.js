@@ -31,8 +31,8 @@ const ini           = require('ini');
 const path          = require('path');
 const util          = require('util');
 const EventEmitter  = require('events');
-const ntLogger      = require('./lib/logger');
-const ntWork        = require('./lib/work');
+const ntLogger      = require('@ntlab/ntlib/logger');
+const ntWork        = require('@ntlab/ntlib/work');
 const AppStorage    = require('./storage');
 const { AppTerminalDispatcher, AppActivityDispatcher } = require('./dispatcher');
 
