@@ -10,7 +10,7 @@ other party via its socket communication.
 Node SMS Gateway can be extended with other functionality using its plugin
 interface.
 
-For example, see included [Prepaid](/plugins/prepaid.js) plugin.
+For example, see included [Prepaid](/plugins/prepaid/index.js) plugin.
 
 ## Installation
 
