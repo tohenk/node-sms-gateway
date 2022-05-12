@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2018-2020 Toha <tohenk@yahoo.com>
+ * Copyright (c) 2018-2022 Toha <tohenk@yahoo.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,8 +22,7 @@
  * SOFTWARE.
  */
 
-const path          = require('path');
-const Sequelize     = require('sequelize');
+const Sequelize = require('sequelize');
 
 /**
  * App storage.
@@ -41,6 +40,8 @@ class AppStorage {
     PRIORITY_NORMAL = 20
     PRIORITY_BELOW = 50
 
+    Sequelize = Sequelize
+
     init(options) {
         this.db = new Sequelize(options);
         this.GwQueue = require('./model/GwQueue')(this.db);
@@ -48,19 +49,19 @@ class AppStorage {
         return new Promise((resolve, reject) => {
             this.db.authenticate()
                 .then(() => resolve())
-                .catch((err) => reject(err))
+                .catch(err => reject(err))
             ;
         });
     }
 
     saveQueue(origin, queue, done) {
-        const cb = (result) => {
+        const cb = result => {
             if (typeof done == 'function') {
                 done(result);
             }
         }
         this.GwQueue.count({where: {imsi: origin, hash: queue.hash}})
-            .then((count) => {
+            .then(count => {
                 if (count == 0) {
                     queue.imsi = origin;
                     queue.processed = 0;
@@ -68,15 +69,15 @@ class AppStorage {
                     if (!queue.priority) queue.priority = this.PRIORITY_NORMAL;
                     if (!queue.time) queue.time = new Date();
                     this.GwQueue.create(queue)
-                        .then((result) => cb(result))
-                        .catch((err) => cb())
+                        .then(result => cb(result))
+                        .catch(err => cb())
                     ;
                 } else {
                     cb();
                 }
             })
-            .catch((err) => {
-                console.log(err);
+            .catch(err => {
+                console.error(err);
                 cb();
             })
         ;
@@ -84,7 +85,7 @@ class AppStorage {
 
     saveLog(origin, log, done) {
         this.GwLog.count({where: {imsi: origin, hash: log.hash, type: log.type}})
-            .then((count) => {
+            .then(count => {
                 if (count == 0) {
                     this.GwLog.create({
                         imsi: origin,
@@ -95,7 +96,7 @@ class AppStorage {
                         status: log.status,
                         time: log.time
                     })
-                        .then((result) => {
+                        .then(result => {
                             if (typeof done == 'function') {
                                 done(result);
                             }
@@ -103,8 +104,8 @@ class AppStorage {
                     ;
                 }
             })
-            .catch((err) => {
-                console.log(err);
+            .catch(err => {
+                console.error(err);
             })
         ;
     }
@@ -112,16 +113,16 @@ class AppStorage {
     updateReport(origin, report, done) {
         const condition = {imsi: origin, hash: report.hash, type: this.ACTIVITY_SMS};
         this.GwLog.count({where: condition})
-            .then((count) => {
+            .then(count => {
                 if (count == 1) {
                     this.GwLog.findOne({where: condition})
-                        .then((GwLog) => {
+                        .then(GwLog => {
                             GwLog.update({
                                 code: report.code,
                                 sent: report.sent,
                                 received: report.received
                             })
-                                .then((GwLog) => {
+                                .then(GwLog => {
                                     if (typeof done == 'function') {
                                         done(GwLog);
                                     }
@@ -131,8 +132,8 @@ class AppStorage {
                     ;
                 }
             })
-            .catch((err) => {
-                console.log(err);
+            .catch(err => {
+                console.error(err);
             })
         ;
     }
@@ -162,7 +163,6 @@ ORDER BY a.time DESC LIMIT ?, ?`;
         return this.db.query(sql, {replacements: [offset, limit], type: this.db.QueryTypes.SELECT,
             model: this.GwQueue});
     }
-
 }
 
 module.exports = new AppStorage();

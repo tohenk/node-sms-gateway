@@ -10,11 +10,11 @@ other party via its socket communication.
 Node SMS Gateway can be extended with other functionality using its plugin
 interface.
 
-For example, see included [Prepaid](/plugins/prepaid/index.js) plugin.
+For example, see included [Prepaid](https://github.com/tohenk/node-sms-gateway-prepaid) plugin.
 
 ## Installation
 
-Installation is available via GIT.
+Stand alone installation is available using GIT.
 
 ```
 $ cd ~
@@ -23,10 +23,22 @@ $ cd node-sms-gateway
 $ npm install
 ```
 
+A web interface installation is needed as its now a separate package.
+
+```
+$ npm install @ntlab/sms-gateway-ui
+```
+
+Install plugins as you need.
+
+```
+$ npm install @ntlab/sms-gateway-prepaid
+```
+
 To run application (On some Linux distribution replace `node` with `nodejs`)
 
 ```
-$ node app.js --plugins=prepaid
+$ node app.js --plugins=@ntlab/sms-gateway-prepaid
 ```
 
 ## Configuration

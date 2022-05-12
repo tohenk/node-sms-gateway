@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (c) 2018-2020 Toha <tohenk@yahoo.com>
+ * Copyright (c) 2018-2022 Toha <tohenk@yahoo.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,11 +22,9 @@
  * SOFTWARE.
  */
 
-const EventEmitter  = require('events');
-const Sequelize     = require('sequelize');
-const AppStorage    = require('./storage');
-
-const Op            = Sequelize.Op;
+const EventEmitter = require('events');
+const Op = require('sequelize').Op;
+const AppStorage = require('./storage');
 
 /**
  * Queue dispatcher.
@@ -54,7 +52,7 @@ class AppDispatcher extends EventEmitter {
             this.loading = true;
             this.count = 0;
             this.queues = [];
-            this.getQueues((results) => {
+            this.getQueues(results => {
                 this.loading = false;
                 this.loadTime = Date.now();
                 this.queues = results;
@@ -93,7 +91,6 @@ class AppDispatcher extends EventEmitter {
             this.load();
         }
     }
-
 }
 
 /**
@@ -145,7 +142,7 @@ class AppTerminalDispatcher extends AppDispatcher {
                 ['time', 'ASC']
             ]
         })
-            .then((results) => {
+            .then(results => {
                 done(results);
             })
         ;
@@ -165,7 +162,7 @@ class AppTerminalDispatcher extends AppDispatcher {
             updates.retry = GwQueue.retry ? GwQueue.retry + 1 : 1;
         }
         GwQueue.update(updates)
-            .then((result) => {
+            .then(result => {
                 if (GwQueue.type != AppStorage.ACTIVITY_USSD) {
                     AppStorage.saveLog(GwQueue.imsi, result);
                 }
@@ -175,7 +172,7 @@ class AppTerminalDispatcher extends AppDispatcher {
     }
 
     process(GwQueue) {
-        const f = (action) => {
+        const f = action => {
             if (action) {
                 action
                     .then(() => {
@@ -195,7 +192,7 @@ class AppTerminalDispatcher extends AppDispatcher {
                 // if it is a message retry then ensure the status is really failed
                 if (GwQueue.retry != null) {
                     this.term.query('status', GwQueue.hash)
-                        .then((status) => {
+                        .then(status => {
                             if (status.success && status.hash == GwQueue.hash) {
                                 if (status.status) {
                                     // it was success, update status
@@ -219,7 +216,6 @@ class AppTerminalDispatcher extends AppDispatcher {
                 break;
         }
     }
-
 }
 
 /**
@@ -244,7 +240,7 @@ class AppActivityDispatcher extends AppDispatcher {
                 ['time', 'ASC']
             ]
         })
-            .then((results) => {
+            .then(results => {
                 done(results);
             })
         ;
@@ -277,9 +273,7 @@ class AppActivityDispatcher extends AppDispatcher {
         if (terminals.length) {
             let index = 0;
             if (terminals.length > 1) {
-                terminals.sort((a, b) => {
-                    return a.options.priority - b.options.priority;
-                });
+                terminals.sort((a, b) => a.options.priority - b.options.priority);
                 index = Math.floor(Math.random() * terminals.length);
             }
             return terminals[index];
@@ -319,7 +313,7 @@ class AppActivityDispatcher extends AppDispatcher {
                     this.emit('queue', queue);
                 }
             });
-            this.once('queue', (queue) => {
+            this.once('queue', queue => {
                 this.processQueue(queue, () => {
                     this.processing = false;
                     if (this.appterm.uiCon) {
@@ -352,7 +346,7 @@ class AppActivityDispatcher extends AppDispatcher {
             }
             if (processed) {
                 if (this.appterm.gwclients.length) {
-                    this.appterm.gwclients.forEach((socket) => {
+                    this.appterm.gwclients.forEach(socket => {
                         if (term.options.group == socket.group) {
                             console.log('Sending activity notification %d-%s to %s', GwQueue.type,
                                 GwQueue.hash, socket.id);
@@ -373,7 +367,7 @@ class AppActivityDispatcher extends AppDispatcher {
                         }
                     });
                 }
-                this.appterm.plugins.forEach((plugin) => {
+                this.appterm.plugins.forEach(plugin => {
                     if (plugin.group == undefined || term.options.group == plugin.group) {
                         plugin.handle(GwQueue);
                         if (GwQueue.veto) {
@@ -384,8 +378,8 @@ class AppActivityDispatcher extends AppDispatcher {
             }
             GwQueue.update({processed: 1, status: processed ? 1 : 0})
                 .then(() => done())
-                .catch((err) => {
-                    console.log(err);
+                .catch(err => {
+                    console.error(err);
                     done();
                 })
             ;
@@ -413,7 +407,6 @@ class AppActivityDispatcher extends AppDispatcher {
             return true;
         }
     }
-
 }
 
 module.exports = {
