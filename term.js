@@ -39,7 +39,8 @@ const { AppTerminalDispatcher, AppActivityDispatcher } = require('./dispatcher')
 class AppTerm {
 
     Storage = AppStorage
-    ClientRoom = 'clients'
+    ClientRoom = 'client'
+    UiRoom = 'ui'
 
     init(config) {
         this.config = config;
@@ -52,6 +53,9 @@ class AppTerm {
         this.gwclients = [];
         this.plugins = [];
         this.dispatcher = new AppActivityDispatcher(this);
+        this.dispatcher.on('queue-processed', queue => {
+            this.uiSend('queue-processed', queue);
+        });
         return Work.works([
             w => this.initializeLogger(),
             w => AppStorage.init(config.database),
@@ -70,13 +74,17 @@ class AppTerm {
     }
 
     loadPlugins() {
-        if (!this.config.plugins) return Promise.resolve();
+        if (!this.config.plugins) {
+            return Promise.resolve();
+        }
         return new Promise((resolve, reject) => {
             // create plugins data directory if needed
-            if (!fs.existsSync(this.config.datadir)) fs.mkdirSync(this.config.datadir);
-            let plugins = Array.isArray(this.config.plugins) ? this.config.plugins : this.config.plugins.split(',');
+            if (!fs.existsSync(this.config.datadir)) {
+                fs.mkdirSync(this.config.datadir);
+            }
+            const plugins = Array.isArray(this.config.plugins) ? this.config.plugins : this.config.plugins.split(',');
             for (let i = 0; i < plugins.length; i++) {
-                let plugin = plugins[i].trim();
+                const plugin = plugins[i].trim();
                 let pluginSrc;
                 [
                     plugin,
@@ -90,7 +98,7 @@ class AppTerm {
                 });
                 if (!pluginSrc) {
                     // is plugin a package
-                    let res = require.resolve(plugin);
+                    const res = require.resolve(plugin);
                     if (res) {
                         pluginSrc = res;
                     }
@@ -99,9 +107,9 @@ class AppTerm {
                         continue;
                     }
                 }
-                let p = require(pluginSrc);
+                const p = require(pluginSrc);
                 if (typeof p == 'function') {
-                    let instance = new p(this);
+                    const instance = new p(this);
                     if (instance.name && typeof instance.handle == 'function') {
                         instance.src = pluginSrc;
                         if (typeof instance.initialize == 'function') {
@@ -156,7 +164,7 @@ class AppTerm {
         let result;
         Object.keys(this.operators).forEach(operator => {
             Object.values(this.operators[operator]).forEach(prefix => {
-                let prefixes = prefix.split('-');
+                const prefixes = prefix.split('-');
                 if (number.substr(0, prefixes[0].length) == prefixes[0]) {
                     result = operator;
                     return true;
@@ -171,7 +179,9 @@ class AppTerm {
 
     getNetworkOperator(imsi) {
         const term = this.get(imsi);
-        if (term) return term.info.network.operator;
+        if (term) {
+            return term.info.network.operator;
+        }
     }
 
     changed() {
@@ -181,7 +191,9 @@ class AppTerm {
             pool.terminals.forEach(term => {
                 const group = term.options.group || '';
                 this.terminals.push(term);
-                if (!this.groups[group]) this.groups[group] = [];
+                if (!this.groups[group]) {
+                    this.groups[group] = [];
+                }
                 this.groups[group].push(term);
             });
         });
@@ -202,14 +214,16 @@ class AppTerm {
     setSocketIo(io) {
         this.serverIo = io;
         this.uiCon = this.serverIo.of('/ui');
-        this.uiCon.on('connection', (socket) => {
+        this.uiCon.on('connection', socket => {
             console.log('UI client connected: %s', socket.id);
+            socket.join(this.UiRoom);
             socket.on('disconnect', () => {
                 console.log('UI client disconnected: %s', socket.id);
+                socket.leave(this.UiRoom);
             });
         });
         this.gwCon = this.serverIo.of('/gw');
-        this.gwCon.on('connection', (socket) => {
+        this.gwCon.on('connection', socket => {
             console.log('Gateway client connected: %s', socket.id);
             socket.time = new Date();
             const timeout = setTimeout(() => {
@@ -225,7 +239,7 @@ class AppTerm {
                 const idx = this.gwclients.indexOf(socket);
                 if (idx >= 0) {
                     this.gwclients.splice(idx, 1);
-                    if (this.uiCon) this.uiCon.emit('client');
+                    this.uiSend('client');
                 }
             });
             socket.on('auth', secret => {
@@ -233,17 +247,21 @@ class AppTerm {
                 if (authenticated) {
                     console.log('Client is authenticated: %s', socket.id);
                     clearTimeout(timeout);
-                    this.gwclients.push(socket);
+                    if (this.gwclients.indexOf(socket) < 0) {
+                        this.gwclients.push(socket);
+                    }
                     this.dispatcher.reload();
                     socket.join(this.ClientRoom);
-                    if (this.uiCon) this.uiCon.emit('client');
+                    this.uiSend('client');
                 } else {
                     console.log('Client is NOT authenticated: %s', socket.id);
                 }
                 socket.emit('auth', authenticated);
             });
             socket.on('group', data => {
-                if (this.gwclients.indexOf(socket) < 0) return;
+                if (this.gwclients.indexOf(socket) < 0) {
+                    return;
+                }
                 console.log('Group changed for %s => %s', socket.id, data);
                 if (socket.group) {
                     socket.leave(socket.group);
@@ -252,15 +270,29 @@ class AppTerm {
                 socket.join(socket.group);
             });
             socket.on('message', data => {
-                if (this.gwclients.indexOf(socket) < 0) return;
+                if (this.gwclients.indexOf(socket) < 0) {
+                    return;
+                }
                 this.handleMessage(socket, data);
             });
             socket.on('message-retry', data => {
-                if (this.gwclients.indexOf(socket) < 0) return;
+                if (this.gwclients.indexOf(socket) < 0) {
+                    return;
+                }
                 this.handleMessageRetry(socket, data);
             });
         });
         return this;
+    }
+
+    uiSend(message, data = null) {
+        if (this.uiCon) {
+            if (data) {
+                this.uiCon.to(this.UiRoom).emit(message, data);
+            } else {
+                this.uiCon.to(this.UiRoom).emit(message);
+            }
+        }
     }
 
     handleMessage(socket, data) {
@@ -278,9 +310,7 @@ class AppTerm {
                     time: queue.time,
                     status: true
                 });
-                if (this.uiCon) {
-                    this.uiCon.emit('new-activity', queue.type);
-                }
+                this.uiSend('new-activity', queue.type);
             }
         });
     }
@@ -344,9 +374,7 @@ class AppTerm {
     log() {
         this.logger.log.apply(this.logger, Array.from(arguments))
             .then(message => {
-                if (this.uiCon) {
-                    this.uiCon.emit('activity', {time: Date.now(), message: message});
-                }
+                this.uiSend('activity', {time: Date.now(), message: message});
             })
         ;
     }
@@ -367,7 +395,7 @@ class AppTermPool {
         this.con = this.parent.clientIo(this.url + '/ctrl');
         const done = result => {
             if (result) {
-                this.parent.uiCon.emit('new-activity', result.type);
+                this.parent.uiSend('new-activity', result.type);
                 this.parent.dispatcher.reload();
             }
         }
@@ -416,7 +444,7 @@ class AppTermPool {
                 address: data.address,
                 data: data.data
             }, done);
-            this.parent.uiCon.emit('ussd', {
+            this.parent.uiSend('ussd', {
                 imsi: data.imsi,
                 address: data.address,
                 message: data.data
@@ -442,21 +470,31 @@ class AppTermPool {
     build(terms) {
         this.reset();
         terms.forEach(imsi => {
-            let con = this.parent.clientIo(this.url + '/' + imsi);
-            let term = new AppTerminal(imsi, con, {
-                configFilename: path.join(this.parent.configdir, imsi + '.cfg')
-            });
+            const con = this.parent.clientIo(this.url + '/' + imsi);
+            const term = new AppTerminal(imsi, con, {configFilename: path.join(this.parent.configdir, imsi + '.cfg')});
             term.operatorList = Object.keys(this.parent.operators);
+            term
+                .on('pre-queue', queue => {
+                    this.parent.uiSend('queue', queue);
+                })
+                .on('post-queue', queue => {
+                    this.parent.uiSend('queue-done', queue);
+                })
+            ;
             this.terminals.push(term);
         });
         let timeout;
         const f = () => {
             let readyCnt = 0;
             this.terminals.forEach(term => {
-                if (term.connected) readyCnt++;
+                if (term.connected) {
+                    readyCnt++;
+                }
             });
             if (terms.length && readyCnt == terms.length) {
-                if (timeout != undefined) clearTimeout(timeout);
+                if (timeout != undefined) {
+                    clearTimeout(timeout);
+                }
                 this.checkPending();
             } else {
                 timeout = setTimeout(f, 500);
@@ -472,7 +510,9 @@ class AppTermPool {
             term.con.disconnect();
         });
         this.terminals = [];
-        if (update) this.parent.changed();
+        if (update) {
+            this.parent.changed();
+        }
         return this;
     }
 }
@@ -488,22 +528,32 @@ class AppTerminal extends EventEmitter {
         this.busy = false;
         this.options = this.defaultOptions();
         this.operatorList = [];
-        if (options.configFilename) this.configFilename = options.configFilename;
+        if (options.configFilename) {
+            this.configFilename = options.configFilename;
+        }
         if (this.configFilename && fs.existsSync(this.configFilename)) {
-            let config = JSON.parse(fs.readFileSync(this.configFilename, 'utf-8'));
-            this.readOptions(config);
+            this.readOptions(JSON.parse(fs.readFileSync(this.configFilename, 'utf-8')));
         } else {
             this.readOptions(options);
         }
         // terminal operation timeout is max at 10 seconds
         this.timeout = options.timeout || 12000;
         this.dispatcher = new AppTerminalDispatcher(this);
+        this.dispatcher
+            .on('pre-queue', queue => {
+                this._queue = queue;
+                this.emit('pre-queue', queue);
+            })
+            .on('post-queue', queue => {
+                this.emit('post-queue', queue);
+            })
+        ;
         this.con.on('connect', () => {
             this.connected = true;
             this.syncOptions(false);
             this.getInfo()
-                .then(() => {
-                    this.info = this.reply;
+                .then(info => {
+                    this.info = info;
                     this.dispatcher.reload();
                 })
             ;
@@ -538,7 +588,7 @@ class AppTerminal extends EventEmitter {
     }
 
     readOptions(options) {
-        let newOptions = {};
+        const newOptions = {};
         Object.keys(this.options).forEach(opt => {
             if (typeof options[opt] != 'undefined') {
                 newOptions[opt] = options[opt];
@@ -549,14 +599,16 @@ class AppTerminal extends EventEmitter {
     }
 
     applyOptions(options) {
-        let oldOptions = JSON.stringify(this.options, null, 4);
+        const oldOptions = JSON.stringify(this.options, null, 4);
         Object.assign(this.options, options);
-        let newOptions = JSON.stringify(this.options, null, 4);
+        const newOptions = JSON.stringify(this.options, null, 4);
         if (oldOptions != newOptions) {
             this.syncOptions(true);
             if (this.configFilename) {
                 fs.writeFile(this.configFilename, newOptions, err => {
-                    if (err) console.error(err);
+                    if (err) {
+                        console.error(err);
+                    }
                 });
             }
         }
@@ -597,8 +649,10 @@ class AppTerminal extends EventEmitter {
             this.con.once(cmd, result => {
                 this.busy = false;
                 this.reply = result;
-                if (timeout) clearTimeout(timeout);
-                resolve(this);
+                if (timeout) {
+                    clearTimeout(timeout);
+                }
+                resolve(result);
             });
             timeout = setTimeout(t, this.timeout);
             if (data) {
@@ -606,6 +660,32 @@ class AppTerminal extends EventEmitter {
             } else {
                 this.con.emit(cmd);
             }
+        });
+    }
+
+    getStat() {
+        return new Promise((resolve, reject) => {
+            const res = {
+                unprocessed: {
+                    label: 'Unprocessed queue',
+                    value: this.dispatcher.queues.length
+                },
+                last: {
+                    label: 'Last queue',
+                    value: this._queue ? this._queue.hash.substr(0, 8) : null
+                }
+            }
+            AppStorage.countStats(this.name)
+                .then(rows => {
+                    rows.forEach(row => {
+                        res[row.type === 1 ? 'fail' : 'success'] = {
+                            label: row.type === 1 ? 'Total failed queues' : 'Total succeeded queues',
+                            value: row.count
+                        }
+                    });
+                    resolve(res);
+                })
+                .catch(err => reject(err));
         });
     }
 
@@ -627,11 +707,15 @@ class AppTerminal extends EventEmitter {
 
     fixData(data) {
         return new Promise((resolve, reject) => {
-            if (!data.imsi) data.imsi = this.name;
-            if (!data.time) data.time = new Date();
+            if (!data.imsi) {
+                data.imsi = this.name;
+            }
+            if (!data.time) {
+                data.time = new Date();
+            }
             if (!data.hash) {
                 this.query('hash', data)
-                    .then(() => resolve(this.reply))
+                    .then(result => resolve(result))
                     .catch(() => resolve(data))
                 ;
             } else {

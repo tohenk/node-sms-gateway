@@ -83,7 +83,7 @@ class AppDispatcher extends EventEmitter {
     check() {
     }
 
-    reloadNeeded() {
+    reloadIfNeeded() {
         if (this.count > 0 || (this.count == 0 && this.queues.length == 0)) {
             if (this.count == 0 && ((Date.now() - this.loadTime) >= this.reloadInterval) && !this.loading) {
                 this.count++;
@@ -103,11 +103,12 @@ class AppTerminalDispatcher extends AppDispatcher {
         this.term = term;
         this.maxRetry = 3;
         this.term.on('idle', () => {
-            this.reloadNeeded();
+            this.reloadIfNeeded();
             if (this.queues.length && !this.term.busy) {
                 const queue = this.queues.shift();
                 if (!this.inQueue(queue.id)) {
                     console.log('Processing queue: %s <= %s (%d)', queue.imsi, queue.hash, queue.id);
+                    this.emit('pre-queue', queue);
                     this.process(queue);
                 }
             }
@@ -175,12 +176,16 @@ class AppTerminalDispatcher extends AppDispatcher {
         const f = action => {
             if (action) {
                 action
-                    .then(() => {
-                        this.update(GwQueue, true);
+                    .then(result => {
+                        this.update(GwQueue, result.success);
                     })
                     .catch(() => {
                         this.update(GwQueue, false);
                     })
+                    .finally(() => {
+                        console.log('Queue done: %s <= %s (%d)', GwQueue.imsi, GwQueue.hash, GwQueue.id);
+                        this.emit('post-queue', GwQueue);
+                    });
                 ;
             }
         }
@@ -251,7 +256,7 @@ class AppActivityDispatcher extends AppDispatcher {
             if (this.appterm.gwclients.length == 0 && this.appterm.plugins.length == 0) {
                 console.log('Activity processing skipped, no consumer registered.');
             } else {
-                this.reloadNeeded();
+                this.reloadIfNeeded();
                 this.process();
             }
         }
@@ -284,15 +289,27 @@ class AppActivityDispatcher extends AppDispatcher {
         const result = [];
         const priorities = [];
         for (let i = 0; i < this.appterm.terminals.length; i++) {
-            let term = this.appterm.terminals[i];
-            if (!term.connected) continue;
-            if (group && term.options.group != group) continue;
-            if (type == AppStorage.ACTIVITY_CALL && !term.options.allowCall) continue;
-            if (type == AppStorage.ACTIVITY_SMS && !term.options.sendMessage) continue;
+            const term = this.appterm.terminals[i];
+            if (!term.connected) {
+                continue;
+            }
+            if (group && term.options.group != group) {
+                continue;
+            }
+            if (type == AppStorage.ACTIVITY_CALL && !term.options.allowCall) {
+                continue;
+            }
+            if (type == AppStorage.ACTIVITY_SMS && !term.options.sendMessage) {
+                continue;
+            }
             if (term.options.operators.length && type != AppStorage.ACTIVITY_USSD) {
-                let op = this.appterm.getOperator(address);
-                if (!op) continue;
-                if (term.options.operators.indexOf(op) < 0) continue;
+                const op = this.appterm.getOperator(address);
+                if (!op) {
+                    continue;
+                }
+                if (term.options.operators.indexOf(op) < 0) {
+                    continue;
+                }
                 // give an assigned operator as priority
                 priorities.push(term);
             }
@@ -316,9 +333,7 @@ class AppActivityDispatcher extends AppDispatcher {
             this.once('queue', queue => {
                 this.processQueue(queue, () => {
                     this.processing = false;
-                    if (this.appterm.uiCon) {
-                        this.appterm.uiCon.emit('queue-processed', queue);
-                    }
+                    this.emit('queue-processed', queue);
                     this.check();
                 });
             });

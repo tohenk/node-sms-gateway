@@ -66,8 +66,12 @@ class AppStorage {
                     queue.imsi = origin;
                     queue.processed = 0;
                     queue.status = 0;
-                    if (!queue.priority) queue.priority = this.PRIORITY_NORMAL;
-                    if (!queue.time) queue.time = new Date();
+                    if (!queue.priority) {
+                        queue.priority = this.PRIORITY_NORMAL;
+                    }
+                    if (!queue.time) {
+                        queue.time = new Date();
+                    }
                     this.GwQueue.create(queue)
                         .then(result => cb(result))
                         .catch(err => cb())
@@ -136,6 +140,17 @@ class AppStorage {
                 console.error(err);
             })
         ;
+    }
+
+    countStats(imsi) {
+        const table = 'gw_queue';
+        const sql = `SELECT 1 AS 'type', COUNT(*) AS count FROM ${table}
+WHERE imsi = ? AND type IN (${this.ACTIVITY_CALL}, ${this.ACTIVITY_SMS}, ${this.ACTIVITY_USSD}) AND processed = 1 AND status = 0
+UNION
+SELECT 2 AS 'type', COUNT(*) AS count FROM ${table}
+WHERE imsi = ? AND type IN (${this.ACTIVITY_CALL}, ${this.ACTIVITY_SMS}, ${this.ACTIVITY_USSD}) AND processed = 1 AND status = 1
+`;
+        return this.db.query(sql, {type: this.db.QueryTypes.SELECT, replacements: [imsi, imsi]});
     }
 
     countRecents() {

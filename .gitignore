@@ -62,3 +62,6 @@ typings/
 
 # skip sessions storage
 sessions/
+
+# skip app data
+data/

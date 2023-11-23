@@ -1,6 +1,6 @@
 {
   "name": "@ntlab/sms-gateway",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "SMS Gateway",
   "main": "app.js",
   "scripts": {
@@ -24,7 +24,7 @@
     "@ntlab/ntlib": "^2.0.5",
     "@ntlab/work": "^1.1.5",
     "ini": "^4.1.1",
-    "mysql2": "^3.6.2",
+    "mysql2": "^3.6.3",
     "sequelize": "^6.33.0",
     "socket.io": "^4.7.2",
     "socket.io-client": "^4.7.2"

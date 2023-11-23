@@ -76,25 +76,34 @@ class App {
         }
         let workdir = this.config.workdir ? this.config.workdir : __dirname;
         // check for default configuration
-        if (!this.config.database)
+        if (!this.config.database) {
             this.config.database = database;
-        if (!this.config.countryCode)
+        }
+        if (!this.config.countryCode) {
             this.config.countryCode = '62';
-        if (!this.config.operatorFilename)
+        }
+        if (!this.config.operatorFilename) {
             this.config.operatorFilename = path.join(__dirname, 'Operator.ini');
-        if (!this.config.configdir)
+        }
+        if (!this.config.configdir) {
             this.config.configdir = path.join(workdir, 'config');
-        if (!this.config.datadir)
+        }
+        if (!this.config.datadir) {
             this.config.datadir = path.join(workdir, 'data');
-        if (!this.config.sessiondir)
+        }
+        if (!this.config.sessiondir) {
             this.config.sessiondir = path.join(workdir, 'sessions');
-        if (!this.config.logdir)
+        }
+        if (!this.config.logdir) {
             this.config.logdir = path.join(workdir, 'logs');
+        }
         if (!this.config.secret) {
             this.config.secret = this.hashgen();
             console.log('Using secret: %s', this.config.secret);
         }
-        if (!this.config.security) this.config.security = {};
+        if (!this.config.security) {
+            this.config.security = {};
+        }
         if (!this.config.security.username) {
             this.config.security.username = 'admin';
             console.log('Web interface username using default: %s', this.config.security.username);
