@@ -31,15 +31,17 @@
 const path = require('path');
 const Cmd = require('@ntlab/ntlib/cmd');
 
-Cmd.addBool('help', 'h', 'Show program usage').setAccessible(false);
-Cmd.addVar('config', '', 'Read app configuration from file', 'config-file');
-Cmd.addVar('url', 'u', 'Use terminal at URL if no configuration supplied', 'url');
-Cmd.addVar('key', 'k', 'Terminal secret key', 'key');
-Cmd.addVar('port', 'p', 'Set web server port to listen', 'port');
-Cmd.addVar('plugins', '', 'Load plugins at start, separate each plugin with comma', 'plugins');
+if (require.main === module) {
+    Cmd.addBool('help', 'h', 'Show program usage').setAccessible(false);
+    Cmd.addVar('config', '', 'Read app configuration from file', 'config-file');
+    Cmd.addVar('url', 'u', 'Use terminal at URL if no configuration supplied', 'url');
+    Cmd.addVar('key', 'k', 'Terminal secret key', 'key');
+    Cmd.addVar('port', 'p', 'Set web server port to listen', 'port');
+    Cmd.addVar('plugins', '', 'Load plugins at start, separate each plugin with comma', 'plugins');
 
-if (!Cmd.parse() || (Cmd.get('help') && usage())) {
-    process.exit();
+    if (!Cmd.parse() || (Cmd.get('help') && usage())) {
+        process.exit();
+    }
 }
 
 const fs = require('fs');
@@ -49,7 +51,8 @@ const { Work } = require('@ntlab/work');
 const database = {
     dialect: 'mysql',
     host: 'localhost',
-    username: 'root',
+    port: 3306,
+    user: 'root',
     password: null,
     database: 'smsgw'
 }
@@ -74,7 +77,7 @@ class App {
             console.log('Reading configuration %s', filename);
             this.config = JSON.parse(fs.readFileSync(filename));
         }
-        let workdir = this.config.workdir ? this.config.workdir : __dirname;
+        const workdir = this.config.workdir ? this.config.workdir : __dirname;
         // check for default configuration
         if (!this.config.database) {
             this.config.database = database;
@@ -150,7 +153,7 @@ class App {
             try {
                 this.ui = require(this.config.ui)(this.config);
             } catch (err) {
-                console.error('Web interface not available: ' + this.config.ui);
+                console.error(`Web interface not available: ${this.config.ui} (${err})`);
             }
             resolve();
         });
@@ -208,16 +211,20 @@ class App {
     }
 }
 
-(function run() {
-    new App().run();
-})();
-
-function usage() {
-    console.log('Usage:');
-    console.log('  node %s [options]', path.basename(process.argv[1]));
-    console.log('');
-    console.log('Options:');
-    console.log(Cmd.dump());
-    console.log('');
-    return true;
+if (require.main === module) {
+    (function run() {
+        new App().run();
+    })();
+    
+    function usage() {
+        console.log('Usage:');
+        console.log('  node %s [options]', path.basename(process.argv[1]));
+        console.log('');
+        console.log('Options:');
+        console.log(Cmd.dump());
+        console.log('');
+        return true;
+    }
+} else {
+    module.exports = App;
 }

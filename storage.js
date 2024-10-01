@@ -22,7 +22,10 @@
  * SOFTWARE.
  */
 
-const Sequelize = require('sequelize');
+const path = require('path');
+const Work = require('@ntlab/work/work');
+const SequelizeManager = require('@ntlab/sequelize-manager');
+const { Op, QueryTypes } = require('@sequelize/core');
 
 /**
  * App storage.
@@ -40,29 +43,27 @@ class AppStorage {
     PRIORITY_NORMAL = 20
     PRIORITY_BELOW = 50
 
-    Sequelize = Sequelize
+    Op = Op
 
     init(options) {
-        this.db = new Sequelize(options);
-        this.GwQueue = require('./model/GwQueue')(this.db);
-        this.GwLog = require('./model/GwLog')(this.db);
-        return new Promise((resolve, reject) => {
-            this.db.authenticate()
-                .then(() => resolve())
-                .catch(err => reject(err))
-            ;
-        });
+        this.manager = new SequelizeManager({modeldir: path.join(__dirname, 'model'), modelStore: this});
+        return Work.works([
+            [w => this.manager.init(options)],
+            [w => this.manager.connectDatabase()],
+            [w => this.manager.syncModels()],
+            [w => Promise.resolve(this.db = this.manager.getSequelize())],
+        ]);
     }
 
     saveQueue(origin, queue, done) {
         const cb = result => {
-            if (typeof done == 'function') {
+            if (typeof done === 'function') {
                 done(result);
             }
         }
         this.GwQueue.count({where: {imsi: origin, hash: queue.hash}})
             .then(count => {
-                if (count == 0) {
+                if (count === 0) {
                     queue.imsi = origin;
                     queue.processed = 0;
                     queue.status = 0;
@@ -90,7 +91,7 @@ class AppStorage {
     saveLog(origin, log, done) {
         this.GwLog.count({where: {imsi: origin, hash: log.hash, type: log.type}})
             .then(count => {
-                if (count == 0) {
+                if (count === 0) {
                     this.GwLog.create({
                         imsi: origin,
                         hash: log.hash,
@@ -101,7 +102,7 @@ class AppStorage {
                         time: log.time
                     })
                         .then(result => {
-                            if (typeof done == 'function') {
+                            if (typeof done === 'function') {
                                 done(result);
                             }
                         })
@@ -118,7 +119,7 @@ class AppStorage {
         const condition = {imsi: origin, hash: report.hash, type: this.ACTIVITY_SMS};
         this.GwLog.count({where: condition})
             .then(count => {
-                if (count == 1) {
+                if (count === 1) {
                     this.GwLog.findOne({where: condition})
                         .then(GwLog => {
                             GwLog.update({
@@ -127,7 +128,7 @@ class AppStorage {
                                 received: report.received
                             })
                                 .then(GwLog => {
-                                    if (typeof done == 'function') {
+                                    if (typeof done === 'function') {
                                         done(GwLog);
                                     }
                                 })
@@ -150,7 +151,7 @@ UNION
 SELECT 2 AS 'type', COUNT(*) AS count FROM ${table}
 WHERE imsi = ? AND type IN (${this.ACTIVITY_CALL}, ${this.ACTIVITY_SMS}, ${this.ACTIVITY_USSD}) AND processed = 1 AND status = 1
 `;
-        return this.db.query(sql, {type: this.db.QueryTypes.SELECT, replacements: [imsi, imsi]});
+        return this.db.query(sql, {type: QueryTypes.SELECT, replacements: [imsi, imsi]});
     }
 
     countRecents() {
@@ -162,7 +163,7 @@ INNER JOIN (
     WHERE type IN (${this.ACTIVITY_SMS}, ${this.ACTIVITY_INBOX})
     GROUP BY address
 ) AS b ON a.id = b.id`;
-        return this.db.query(sql, {type: this.db.QueryTypes.SELECT});
+        return this.db.query(sql, {type: QueryTypes.SELECT});
     }
 
     getRecents(offset, limit) {
@@ -175,7 +176,7 @@ INNER JOIN (
     GROUP BY address
 ) AS b ON a.id = b.id
 ORDER BY a.time DESC LIMIT ?, ?`;
-        return this.db.query(sql, {replacements: [offset, limit], type: this.db.QueryTypes.SELECT,
+        return this.db.query(sql, {replacements: [offset, limit], type: QueryTypes.SELECT,
             model: this.GwQueue});
     }
 }

@@ -108,11 +108,11 @@ class AppTerm {
                     }
                 }
                 const p = require(pluginSrc);
-                if (typeof p == 'function') {
+                if (typeof p === 'function') {
                     const instance = new p(this);
-                    if (instance.name && typeof instance.handle == 'function') {
+                    if (instance.name && typeof instance.handle === 'function') {
                         instance.src = pluginSrc;
-                        if (typeof instance.initialize == 'function') {
+                        if (typeof instance.initialize === 'function') {
                             instance.initialize();
                         }
                         this.plugins.push(instance);
@@ -138,7 +138,7 @@ class AppTerm {
     get(imsi) {
         let terminal = null;
         this.terminals.forEach(term => {
-            if (term.name == imsi) {
+            if (term.name === imsi) {
                 terminal = term;
                 return true;
             }
@@ -147,7 +147,7 @@ class AppTerm {
     }
 
     getOperator(number) {
-        if (!this.countryCode || this.countryCode == 'auto') {
+        if (!this.countryCode || this.countryCode === 'auto') {
             this.terminals.forEach(term => {
                 if (term.info.network.country) {
                     this.countryCode = term.info.network.country;
@@ -155,17 +155,17 @@ class AppTerm {
                 }
             });
         }
-        if (!this.countryCode || this.countryCode == 'auto') {
+        if (!this.countryCode || this.countryCode === 'auto') {
             throw new Error('Country code is not set.');
         }
-        if (number.charAt(0) == '+') {
+        if (number.charAt(0) === '+') {
             number = '0' + number.substr(this.countryCode.length + 1);
         }
         let result;
         Object.keys(this.operators).forEach(operator => {
             Object.values(this.operators[operator]).forEach(prefix => {
                 const prefixes = prefix.split('-');
-                if (number.substr(0, prefixes[0].length) == prefixes[0]) {
+                if (number.substr(0, prefixes[0].length) === prefixes[0]) {
                     result = operator;
                     return true;
                 }
@@ -243,7 +243,7 @@ class AppTerm {
                 }
             });
             socket.on('auth', secret => {
-                const authenticated = this.config.secret == secret;
+                const authenticated = this.config.secret === secret;
                 if (authenticated) {
                     console.log('Client is authenticated: %s', socket.id);
                     clearTimeout(timeout);
@@ -323,13 +323,13 @@ class AppTerm {
         }
         AppStorage.GwQueue.count({where: condition})
             .then(count => {
-                if (0 == count) {
+                if (0 === count) {
                     this.handleMessage(socket, data);
                 } else {
                     AppStorage.GwLog.findOne({where: condition})
                         .then(gwlog => {
                             // message report already confirmed
-                            if (gwlog.code != null) {
+                            if (gwlog.code !== null) {
                                 socket.emit('status-report', {
                                     hash: gwlog.hash,
                                     address: gwlog.address,
@@ -338,7 +338,7 @@ class AppTerm {
                                     received: gwlog.received,
                                     time: gwlog.time
                                 });
-                            } else if (gwlog.status == 0) {
+                            } else if (gwlog.status === 0) {
                                 AppStorage.GwQueue.findOne({where: condition})
                                     .then(gwqueue => {
                                         const updates = {processed: 0, retry: null};
@@ -491,8 +491,8 @@ class AppTermPool {
                     readyCnt++;
                 }
             });
-            if (terms.length && readyCnt == terms.length) {
-                if (timeout != undefined) {
+            if (terms.length && readyCnt === terms.length) {
+                if (timeout !== undefined) {
                     clearTimeout(timeout);
                 }
                 this.checkPending();
@@ -590,7 +590,7 @@ class AppTerminal extends EventEmitter {
     readOptions(options) {
         const newOptions = {};
         Object.keys(this.options).forEach(opt => {
-            if (typeof options[opt] != 'undefined') {
+            if (options[opt] !== undefined) {
                 newOptions[opt] = options[opt];
             }
         });
@@ -621,7 +621,7 @@ class AppTerminal extends EventEmitter {
             this.con.once('getopt', options => {
                 const setopts = {};
                 Object.keys(options).forEach(opt => {
-                    if (options[opt] != this.options[opt]) {
+                    if (options[opt] !== this.options[opt]) {
                         setopts[opt] = this.options[opt];
                     }
                 });
@@ -731,7 +731,7 @@ class AppTerminal extends EventEmitter {
                     if (queue) {
                         this.dispatcher.reload();
                     }
-                    if (typeof cb == 'function') {
+                    if (typeof cb === 'function') {
                         cb(queue);
                     }
                 });

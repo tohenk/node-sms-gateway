@@ -23,7 +23,7 @@
  */
 
 const EventEmitter = require('events');
-const Op = require('sequelize').Op;
+const { Op } = require('@sequelize/core');
 const AppStorage = require('./storage');
 
 /**
@@ -84,8 +84,8 @@ class AppDispatcher extends EventEmitter {
     }
 
     reloadIfNeeded() {
-        if (this.count > 0 || (this.count == 0 && this.queues.length == 0)) {
-            if (this.count == 0 && ((Date.now() - this.loadTime) >= this.reloadInterval) && !this.loading) {
+        if (this.count > 0 || (this.count === 0 && this.queues.length === 0)) {
+            if (this.count === 0 && ((Date.now() - this.loadTime) >= this.reloadInterval) && !this.loading) {
                 this.count++;
             }
             this.load();
@@ -159,12 +159,12 @@ class AppTerminalDispatcher extends AppDispatcher {
         if (success) {
             updates.status = this.term.reply.success ? 1 : 0;
         }
-        if (!success && GwQueue.type == AppStorage.ACTIVITY_SMS) {
+        if (!success && GwQueue.type === AppStorage.ACTIVITY_SMS) {
             updates.retry = GwQueue.retry ? GwQueue.retry + 1 : 1;
         }
         GwQueue.update(updates)
             .then(result => {
-                if (GwQueue.type != AppStorage.ACTIVITY_USSD) {
+                if (GwQueue.type !== AppStorage.ACTIVITY_USSD) {
                     AppStorage.saveLog(GwQueue.imsi, result);
                 }
                 this.endQueue(GwQueue.id);
@@ -195,10 +195,10 @@ class AppTerminalDispatcher extends AppDispatcher {
                 break;
             case AppStorage.ACTIVITY_SMS:
                 // if it is a message retry then ensure the status is really failed
-                if (GwQueue.retry != null) {
+                if (GwQueue.retry !== null) {
                     this.term.query('status', GwQueue.hash)
                         .then(status => {
-                            if (status.success && status.hash == GwQueue.hash) {
+                            if (status.success && status.hash === GwQueue.hash) {
                                 if (status.status) {
                                     // it was success, update status
                                     GwQueue.update({status: 1});
@@ -253,7 +253,7 @@ class AppActivityDispatcher extends AppDispatcher {
 
     check() {
         if (this.appterm.terminals.length) {
-            if (this.appterm.gwclients.length == 0 && this.appterm.plugins.length == 0) {
+            if (this.appterm.gwclients.length === 0 && this.appterm.plugins.length === 0) {
                 console.log('Activity processing skipped, no consumer registered.');
             } else {
                 this.reloadIfNeeded();
@@ -293,16 +293,16 @@ class AppActivityDispatcher extends AppDispatcher {
             if (!term.connected) {
                 continue;
             }
-            if (group && term.options.group != group) {
+            if (group && term.options.group !== group) {
                 continue;
             }
-            if (type == AppStorage.ACTIVITY_CALL && !term.options.allowCall) {
+            if (type === AppStorage.ACTIVITY_CALL && !term.options.allowCall) {
                 continue;
             }
-            if (type == AppStorage.ACTIVITY_SMS && !term.options.sendMessage) {
+            if (type === AppStorage.ACTIVITY_SMS && !term.options.sendMessage) {
                 continue;
             }
-            if (term.options.operators.length && type != AppStorage.ACTIVITY_USSD) {
+            if (term.options.operators.length && type !== AppStorage.ACTIVITY_USSD) {
                 const op = this.appterm.getOperator(address);
                 if (!op) {
                     continue;
@@ -338,7 +338,7 @@ class AppActivityDispatcher extends AppDispatcher {
                 });
             });
         }
-        if (this.queues.length == 0) {
+        if (this.queues.length === 0) {
             if (!this.timeout) {
                 this.timeout = setTimeout(() => {
                     this.timeout = null;
@@ -352,17 +352,17 @@ class AppActivityDispatcher extends AppDispatcher {
         const term = this.appterm.get(GwQueue.imsi);
         if (term) {
             let processed = true;
-            if (GwQueue.type == AppStorage.ACTIVITY_RING || GwQueue.type == AppStorage.ACTIVITY_INBOX) {
+            if (GwQueue.type === AppStorage.ACTIVITY_RING || GwQueue.type === AppStorage.ACTIVITY_INBOX) {
                 processed = this.addressAllowed(GwQueue.address) ? true : false;
             }
             // skip message based its terminal setting
-            if (processed && !term.options.receiveMessage && GwQueue.type == AppStorage.ACTIVITY_INBOX) {
+            if (processed && !term.options.receiveMessage && GwQueue.type === AppStorage.ACTIVITY_INBOX) {
                 processed = false;
             }
             if (processed) {
                 if (this.appterm.gwclients.length) {
                     this.appterm.gwclients.forEach(socket => {
-                        if (term.options.group == socket.group) {
+                        if (term.options.group === socket.group) {
                             console.log('Sending activity notification %d-%s to %s', GwQueue.type,
                                 GwQueue.hash, socket.id);
                             switch (GwQueue.type) {
@@ -383,7 +383,7 @@ class AppActivityDispatcher extends AppDispatcher {
                     });
                 }
                 this.appterm.plugins.forEach(plugin => {
-                    if (plugin.group == undefined || term.options.group == plugin.group) {
+                    if (plugin.group === undefined || term.options.group === plugin.group) {
                         plugin.handle(GwQueue);
                         if (GwQueue.veto) {
                             return true;
@@ -425,7 +425,7 @@ class AppActivityDispatcher extends AppDispatcher {
 }
 
 module.exports = {
-    AppDispatcher: AppDispatcher,
-    AppTerminalDispatcher: AppTerminalDispatcher,
-    AppActivityDispatcher: AppActivityDispatcher,
+    AppDispatcher,
+    AppTerminalDispatcher,
+    AppActivityDispatcher,
 }
