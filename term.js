@@ -341,7 +341,7 @@ class AppTerm {
                             } else if (gwlog.status === 0) {
                                 AppStorage.GwQueue.findOne({where: condition})
                                     .then(gwqueue => {
-                                        const updates = {processed: 0, retry: null};
+                                        const updates = {processed: false, retry: null};
                                         let term = this.get(gwqueue.imsi);
                                         // allow to use other terminal in case destined terminal is not exist
                                         // or not able to send message
@@ -678,8 +678,8 @@ class AppTerminal extends EventEmitter {
             AppStorage.countStats(this.name)
                 .then(rows => {
                     rows.forEach(row => {
-                        res[row.type === 1 ? 'fail' : 'success'] = {
-                            label: row.type === 1 ? 'Total failed queues' : 'Total succeeded queues',
+                        res[row.type == 1 ? 'fail' : 'success'] = {
+                            label: row.type == 1 ? 'Total failed queues' : 'Total succeeded queues',
                             value: row.count
                         }
                     });

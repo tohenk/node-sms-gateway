@@ -123,13 +123,13 @@ class AppTerminalDispatcher extends AppDispatcher {
                 [Op.or]: [
                     {
                         [Op.and]: [
-                            {processed: 0},
+                            {processed: false},
                             {type: {[Op.in]: [AppStorage.ACTIVITY_CALL, AppStorage.ACTIVITY_SMS, AppStorage.ACTIVITY_USSD]}}
                         ]
                     },
                     {
                         [Op.and]: [
-                            {processed: 1},
+                            {processed: true},
                             {retry: {[Op.lte]: this.maxRetry}},
                             {type: AppStorage.ACTIVITY_SMS},
                             {status: 0}
@@ -155,7 +155,7 @@ class AppTerminalDispatcher extends AppDispatcher {
     }
 
     update(GwQueue, success) {
-        const updates = {processed: 1};
+        const updates = {processed: true};
         if (success) {
             updates.status = this.term.reply.success ? 1 : 0;
         }
@@ -237,7 +237,7 @@ class AppActivityDispatcher extends AppDispatcher {
     getQueues(done) {
         AppStorage.GwQueue.findAll({
             where: {
-                processed: 0,
+                processed: false,
                 type: {[Op.in]: [AppStorage.ACTIVITY_RING, AppStorage.ACTIVITY_INBOX, AppStorage.ACTIVITY_CUSD]}
             },
             order: [
@@ -391,7 +391,7 @@ class AppActivityDispatcher extends AppDispatcher {
                     }
                 });
             }
-            GwQueue.update({processed: 1, status: processed ? 1 : 0})
+            GwQueue.update({processed: true, status: processed ? 1 : 0})
                 .then(() => done())
                 .catch(err => {
                     console.error(err);
