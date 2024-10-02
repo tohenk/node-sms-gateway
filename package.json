@@ -1,6 +1,6 @@
 {
   "name": "@ntlab/sms-gateway",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "description": "SMS Gateway",
   "main": "app.js",
   "scripts": {

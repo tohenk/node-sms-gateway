@@ -53,14 +53,12 @@ class AppTerm {
         this.gwclients = [];
         this.plugins = [];
         this.dispatcher = new AppActivityDispatcher(this);
-        this.dispatcher.on('queue-processed', queue => {
-            this.uiSend('queue-processed', queue);
-        });
+        this.dispatcher.on('queue-processed', queue => this.uiSend('queue-processed', queue));
         return Work.works([
-            w => this.initializeLogger(),
-            w => AppStorage.init(config.database),
-            w => this.loadPlugins(),
-            w => this.loadOperator(),
+            [w => this.initializeLogger()],
+            [w => AppStorage.init(config.database)],
+            [w => this.loadPlugins()],
+            [w => this.loadOperator()],
         ]);
     }
 
@@ -716,7 +714,10 @@ class AppTerminal extends EventEmitter {
             if (!data.hash) {
                 this.query('hash', data)
                     .then(result => resolve(result))
-                    .catch(() => resolve(data))
+                    .catch(err => {
+                        console.error(err);
+                        resolve(data);
+                    })
                 ;
             } else {
                 resolve(data);
@@ -726,7 +727,7 @@ class AppTerminal extends EventEmitter {
 
     addQueue(data, cb) {
         this.fixData(data)
-            .then((result) => {
+            .then(result => {
                 AppStorage.saveQueue(this.name, result, queue => {
                     if (queue) {
                         this.dispatcher.reload();

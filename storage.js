@@ -65,7 +65,7 @@ class AppStorage {
             .then(count => {
                 if (count === 0) {
                     queue.imsi = origin;
-                    queue.processed = 0;
+                    queue.processed = false;
                     queue.status = 0;
                     if (!queue.priority) {
                         queue.priority = this.PRIORITY_NORMAL;
@@ -75,7 +75,10 @@ class AppStorage {
                     }
                     this.GwQueue.create(queue)
                         .then(result => cb(result))
-                        .catch(err => cb())
+                        .catch(err => {
+                            console.error(err);
+                            cb();
+                        })
                     ;
                 } else {
                     cb();
