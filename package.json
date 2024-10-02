@@ -1,6 +1,6 @@
 {
   "name": "@ntlab/sms-gateway",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "description": "SMS Gateway",
   "main": "app.js",
   "scripts": {
@@ -22,7 +22,7 @@
   "homepage": "https://github.com/tohenk/node-sms-gateway#readme",
   "dependencies": {
     "@ntlab/ntlib": "^2.1.3",
-    "@ntlab/sequelize-manager": "^1.1.0",
+    "@ntlab/sequelize-manager": "^1.1.1",
     "@ntlab/work": "^2.1.0",
     "@sequelize/core": "^7.0.0-alpha.42",
     "@sequelize/mysql": "^7.0.0-alpha.42",

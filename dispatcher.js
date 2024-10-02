@@ -100,8 +100,8 @@ class AppTerminalDispatcher extends AppDispatcher {
 
     constructor(term) {
         super();
-        this.term = term;
         this.maxRetry = 3;
+        this.term = term;
         this.term.on('idle', () => {
             this.reloadIfNeeded();
             if (this.queues.length && !this.term.busy) {
@@ -165,8 +165,19 @@ class AppTerminalDispatcher extends AppDispatcher {
         GwQueue.update(updates)
             .then(result => {
                 if (GwQueue.type !== AppStorage.ACTIVITY_USSD) {
-                    AppStorage.saveLog(GwQueue.imsi, result);
+                    AppStorage.saveLog(GwQueue.imsi, result)
+                        .then(() => this.endQueue(GwQueue.id))
+                        .catch(err => {
+                            console.error(err);
+                            this.endQueue(GwQueue.id);
+                        })
+                    ;
+                } else {
+                    this.endQueue(GwQueue.id);
                 }
+            })
+            .catch(err => {
+                console.error(err);
                 this.endQueue(GwQueue.id);
             })
         ;
