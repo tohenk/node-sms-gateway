@@ -165,13 +165,7 @@ class AppTerminalDispatcher extends AppDispatcher {
         GwQueue.update(updates)
             .then(result => {
                 if (GwQueue.type !== AppStorage.ACTIVITY_USSD) {
-                    AppStorage.saveLog(GwQueue.imsi, result)
-                        .then(() => this.endQueue(GwQueue.id))
-                        .catch(err => {
-                            console.error(err);
-                            this.endQueue(GwQueue.id);
-                        })
-                    ;
+                    AppStorage.saveLog(GwQueue.imsi, result, GwLog => this.endQueue(GwQueue.id));
                 } else {
                     this.endQueue(GwQueue.id);
                 }

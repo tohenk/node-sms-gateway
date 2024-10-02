@@ -60,7 +60,6 @@ const database = {
 class App {
 
     config = {}
-    term = null
 
     initialize() {
         let filename;
@@ -133,6 +132,18 @@ class App {
                 key: Cmd.get('key') || ''
             }];
         }
+        this.config.getPath = function(path) {
+            let rootPath = this.rootPath;
+            if (rootPath) {
+                if (rootPath.substr(-1) === '/') {
+                    rootPath = rootPath.substr(0, rootPath.length - 1);
+                }
+                if (rootPath) {
+                    path = rootPath + path;
+                }
+            }
+            return path;
+        }
         return true;
     }
 
@@ -170,6 +181,9 @@ class App {
             } else {
                 opts.cors = {origin: '*'};
             }
+            if (this.config.rootPath) {
+                opts.path = this.config.getPath('/socket.io/');
+            }
             const { Server } = require('socket.io');
             const io = new Server(server, opts);
             const termio = require('socket.io-client');
@@ -180,7 +194,7 @@ class App {
                 this.ui.title = 'SMS Gateway';
                 this.ui.term = this.ui.locals.term = this.term;
                 this.ui.authenticate = (username, password) => {
-                    return username == this.config.security.username && password == this.config.security.password ?
+                    return username === this.config.security.username && password === this.config.security.password ?
                         true : false;
                 }
                 const packageInfo = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json')));

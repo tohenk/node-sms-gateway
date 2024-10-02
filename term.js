@@ -201,7 +201,7 @@ class AppTerm {
     }
 
     setTermIo(io) {
-        this.clientIo = io;
+        this.io = io;
         this.config.pools.forEach(pool => {
             const p = new AppTermPool(this, pool);
             this.pools.push(p);
@@ -209,9 +209,9 @@ class AppTerm {
         return this;
     }
 
-    setSocketIo(io) {
-        this.serverIo = io;
-        this.uiCon = this.serverIo.of('/ui');
+    setSocketIo(sio) {
+        this.sio = sio;
+        this.uiCon = this.sio.of(this.config.getPath('/ui'));
         this.uiCon.on('connection', socket => {
             console.log('UI client connected: %s', socket.id);
             socket.join(this.UiRoom);
@@ -220,7 +220,7 @@ class AppTerm {
                 socket.leave(this.UiRoom);
             });
         });
-        this.gwCon = this.serverIo.of('/gw');
+        this.gwCon = this.sio.of(this.config.getPath('/gw'));
         this.gwCon.on('connection', socket => {
             console.log('Gateway client connected: %s', socket.id);
             socket.time = new Date();
@@ -380,17 +380,18 @@ class AppTerm {
 
 class AppTermPool {
 
-    constructor(parent, options) {
+    constructor(parent, parameters) {
         this.parent = parent;
-        this.name = options.name;
-        this.url = options.url;
-        this.key = options.key;
+        this.name = parameters.name;
+        this.url = parameters.url;
+        this.key = parameters.key;
+        this.options = parameters.options || {};
         this.terminals = [];
         this.init();
     }
 
     init() {
-        this.con = this.parent.clientIo(this.url + '/ctrl');
+        this.con = this.parent.io(this.url + '/ctrl', this.options);
         const done = result => {
             if (result) {
                 this.parent.uiSend('new-activity', result.type);
@@ -468,7 +469,7 @@ class AppTermPool {
     build(terms) {
         this.reset();
         terms.forEach(imsi => {
-            const con = this.parent.clientIo(this.url + '/' + imsi);
+            const con = this.parent.io(this.url + '/' + imsi, this.options);
             const term = new AppTerminal(imsi, con, {configFilename: path.join(this.parent.configdir, imsi + '.cfg')});
             term.operatorList = Object.keys(this.parent.operators);
             term

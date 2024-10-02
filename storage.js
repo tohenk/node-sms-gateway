@@ -95,7 +95,7 @@ class AppStorage {
         this.GwLog.count({where: {imsi: origin, hash: log.hash, type: log.type}})
             .then(count => {
                 if (count === 0) {
-                    this.GwLog.create({
+                    const data = {
                         imsi: origin,
                         hash: log.hash,
                         type: log.type,
@@ -103,11 +103,15 @@ class AppStorage {
                         data: log.data,
                         status: log.status,
                         time: log.time
-                    })
+                    }
+                    this.GwLog.create(data)
                         .then(result => {
                             if (typeof done === 'function') {
                                 done(result);
                             }
+                        })
+                        .catch(err => {
+                            console.error(err);
                         })
                     ;
                 }
@@ -125,11 +129,12 @@ class AppStorage {
                 if (count === 1) {
                     this.GwLog.findOne({where: condition})
                         .then(GwLog => {
-                            GwLog.update({
+                            const data = {
                                 code: report.code,
                                 sent: report.sent,
                                 received: report.received
-                            })
+                            }
+                            GwLog.update(data)
                                 .then(GwLog => {
                                     if (typeof done === 'function') {
                                         done(GwLog);
