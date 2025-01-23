@@ -49,7 +49,8 @@ class AppTerm {
         this.countryCode = config.countryCode;
         this.pools = [];
         this.terminals = [];
-        this.groups = [];
+        this.groups = {};
+        this.aliases = {};
         this.gwclients = [];
         this.plugins = [];
         this.dispatcher = new AppActivityDispatcher(this);
@@ -187,7 +188,13 @@ class AppTerm {
         this.groups = {};
         this.pools.forEach(pool => {
             pool.terminals.forEach(term => {
-                const group = term.options.group || '';
+                let group = term.options.group || '';
+                if (group) {
+                    term.options.groups = group.split(',').map(g => g.trim());
+                    group = term.options.groups[0];
+                } else {
+                    term.options.groups = [];
+                }
                 this.terminals.push(term);
                 if (!this.groups[group]) {
                     this.groups[group] = [];
@@ -422,8 +429,10 @@ class AppTermPool {
             AppStorage.updateReport(data.imsi, data);
             if (this.parent.gwCon) {
                 const term = this.parent.get(data.imsi);
-                const room = term && term.options.group ? term.options.group : this.parent.ClientRoom;
-                this.parent.gwCon.to(room).emit('status-report', data);
+                const rooms = term && term.options.groups.length ? term.options.groups : [this.parent.ClientRoom];
+                for (const room of rooms) {
+                    this.parent.gwCon.to(room).emit('status-report', data);
+                }
             }
         });
         this.con.on('message', data => {

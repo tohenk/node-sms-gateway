@@ -38,7 +38,7 @@ class AppDispatcher extends EventEmitter {
         this.inqueues = [];
         this.loading = false;
         this.loadTime = Date.now();
-        this.reloadInterval = 5 * 60 * 1000; // 5 minutes
+        this.reloadInterval = 300000; // 5 minutes
     }
 
     reload() {
@@ -130,7 +130,7 @@ class AppTerminalDispatcher extends AppDispatcher {
                     {
                         [Op.and]: [
                             {processed: true},
-                            {retry: {[Op.lte]: this.maxRetry}},
+                            {retry: {[Op.lt]: this.maxRetry}},
                             {type: AppStorage.ACTIVITY_SMS},
                             {status: 0}
                         ]
@@ -298,7 +298,7 @@ class AppActivityDispatcher extends AppDispatcher {
             if (!term.connected) {
                 continue;
             }
-            if (group && term.options.group !== group) {
+            if (group && !term.options.groups.includes(group)) {
                 continue;
             }
             if (type === AppStorage.ACTIVITY_CALL && !term.options.allowCall) {
@@ -367,7 +367,7 @@ class AppActivityDispatcher extends AppDispatcher {
             if (processed) {
                 if (this.appterm.gwclients.length) {
                     this.appterm.gwclients.forEach(socket => {
-                        if (term.options.group === socket.group) {
+                        if (term.options.groups.includes(socket.group) || (term.options.groups.length === 0 && !socket.group)) {
                             console.log('Sending activity notification %d-%s to %s', GwQueue.type,
                                 GwQueue.hash, socket.id);
                             switch (GwQueue.type) {
@@ -388,7 +388,7 @@ class AppActivityDispatcher extends AppDispatcher {
                     });
                 }
                 this.appterm.plugins.forEach(plugin => {
-                    if (plugin.group === undefined || term.options.group === plugin.group) {
+                    if (plugin.group === undefined || term.options.groups.includes(plugin.group)) {
                         plugin.handle(GwQueue);
                         if (GwQueue.veto) {
                             return true;
