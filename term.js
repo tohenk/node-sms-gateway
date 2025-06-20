@@ -218,7 +218,7 @@ class AppTerm {
 
     setSocketIo(sio) {
         this.sio = sio;
-        this.uiCon = this.sio.of(this.config.getPath('/ui'));
+        this.uiCon = this.sio.of('/ui');
         this.uiCon.on('connection', socket => {
             console.log('UI client connected: %s', socket.id);
             socket.join(this.UiRoom);
@@ -227,7 +227,7 @@ class AppTerm {
                 socket.leave(this.UiRoom);
             });
         });
-        this.gwCon = this.sio.of(this.config.getPath('/gw'));
+        this.gwCon = this.sio.of('/gw');
         this.gwCon.on('connection', socket => {
             console.log('Gateway client connected: %s', socket.id);
             socket.time = new Date();
