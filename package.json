@@ -21,15 +21,15 @@
   },
   "homepage": "https://github.com/tohenk/node-sms-gateway#readme",
   "dependencies": {
-    "@ntlab/ntlib": "^2.6.2",
-    "@ntlab/sequelize-manager": "^1.1.1",
-    "@ntlab/work": "^2.3.0",
-    "@sequelize/core": "^7.0.0-alpha.46",
-    "@sequelize/mysql": "^7.0.0-alpha.46",
+    "@ntlab/ntlib": "^2.9.1",
+    "@ntlab/sequelize-manager": "^1.4.1",
+    "@ntlab/work": "^2.7.0",
+    "@sequelize/core": "^7.0.0-alpha.48",
+    "@sequelize/mysql": "^7.0.0-alpha.48",
     "ini": "^5.0.0",
-    "mysql2": "^3.14.1",
-    "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1"
+    "mysql2": "^3.22.4",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
   },
   "bin": {
     "node-sms-gateway": "app.js"
